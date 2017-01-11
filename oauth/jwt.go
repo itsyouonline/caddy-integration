@@ -74,17 +74,18 @@ func (h handler) verifyJWTToken(tokenStr string) error {
 	}
 	return nil
 }
-func (h handler) getJWTToken(code string) (string, error) {
+
+func (h handler) getJWTToken(code string) (int64, string, error) {
 	// get oauth2 token
 	token, err := h.getToken(code)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	// build request
 	req, err := http.NewRequest("GET", "https://itsyou.online/v1/oauth/jwt", nil)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	req.Header.Set("Authorization", "token "+token.AccessToken)
@@ -98,10 +99,10 @@ func (h handler) getJWTToken(code string) (string, error) {
 	// do request
 	resp, err := h.hc.Do(req)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
-	return string(body), err
+	return token.ExpiresIn, string(body), err
 }

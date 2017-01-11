@@ -17,6 +17,7 @@ var (
 type token struct {
 	AccessToken string `json:"access_token"`
 	Scope       string `json:"scope"`
+	ExpiresIn   int64  `json:"expires_in"`
 	Info        struct {
 		Username string `json:"username"`
 	} `json:"info"`
@@ -58,14 +59,14 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 	}
 
 	// get JWT token from IYO server
-	jwtToken, err := h.getJWTToken(code)
+	expire, jwtToken, err := h.getJWTToken(code)
 	if err != nil {
 		h.writeError(w, 500, err.Error())
 		return 500, err
 	}
 
 	// save JWT token in cookies
-	setCookies(jwtToken, w)
+	setCookies(jwtToken, expire, w)
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	return http.StatusTemporaryRedirect, nil

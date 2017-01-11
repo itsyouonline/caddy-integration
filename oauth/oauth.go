@@ -49,7 +49,7 @@ func setup(c *caddy.Controller) error {
 	})
 
 	oauthConfig := &oauth2.Config{
-		RedirectURL:  "http://localhost:2015/_iyo_callback",
+		RedirectURL:  conf.RedirectURL,
 		ClientID:     conf.ClientID,
 		ClientSecret: conf.ClientSecret,
 		Scopes:       conf.Scopes,
