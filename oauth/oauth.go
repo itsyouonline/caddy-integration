@@ -3,6 +3,7 @@ package oauth
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -14,7 +15,6 @@ import (
 type config struct {
 	Paths        []string
 	RedirectURL  string
-	LoginPath    string
 	CallbackPath string
 	ClientID     string
 	ClientSecret string
@@ -62,7 +62,6 @@ func setup(c *caddy.Controller) error {
 	httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
 		return &handler{
 			OauthConf:    oauthConfig,
-			LoginPath:    conf.LoginPath,
 			CallbackPath: conf.CallbackPath,
 			Paths:        conf.Paths,
 			Next:         next,
@@ -96,10 +95,6 @@ func parse(c *caddy.Controller) (config, error) {
 					conf.Paths = append(conf.Paths, p)
 				case "redirect_url":
 					conf.RedirectURL, err = parseOne(c)
-				case "callback_path":
-					conf.CallbackPath, err = parseOne(c)
-				case "login_path":
-					conf.LoginPath, err = parseOne(c)
 				case "client_id":
 					conf.ClientID, err = parseOne(c)
 				case "client_secret":
@@ -125,6 +120,22 @@ func parse(c *caddy.Controller) (config, error) {
 			return conf, c.ArgErr()
 		}
 	}
+	if conf.RedirectURL == "" || conf.ClientID == "" || conf.ClientSecret == "" {
+		return conf, fmt.Errorf("redirect_url, client_id, and client_secret can't be blank")
+	}
+	if conf.AuthURL == "" {
+		conf.AuthURL = "https://itsyou.online/v1/oauth/authorize"
+	}
+	if conf.TokenURL == "" {
+		conf.TokenURL = "https://itsyou.online/v1/oauth/access_token"
+	}
+
+	redirURL, err := url.Parse(conf.RedirectURL)
+	if err != nil {
+		return conf, err
+	}
+	conf.CallbackPath = redirURL.Path
+
 	return conf, nil
 }
 

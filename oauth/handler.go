@@ -34,8 +34,6 @@ type handler struct {
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
 	switch {
-	case httpserver.Path(r.URL.Path).Matches(h.LoginPath):
-		return h.serveLogin(w, r)
 	case httpserver.Path(r.URL.Path).Matches(h.CallbackPath):
 		return h.serveCallback(w, r)
 	default:
