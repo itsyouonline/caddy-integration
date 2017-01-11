@@ -13,6 +13,7 @@ import (
 
 type config struct {
 	Paths        []string
+	RedirectURL  string
 	LoginPath    string
 	CallbackPath string
 	ClientID     string
@@ -93,6 +94,8 @@ func parse(c *caddy.Controller) (config, error) {
 						return conf, err
 					}
 					conf.Paths = append(conf.Paths, p)
+				case "redirect_url":
+					conf.RedirectURL, err = parseOne(c)
 				case "callback_path":
 					conf.CallbackPath, err = parseOne(c)
 				case "login_path":

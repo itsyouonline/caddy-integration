@@ -8,7 +8,11 @@ const (
 	cookieName = "caddyoauth"
 )
 
-func setOauthCookies(code string, w http.ResponseWriter, r *http.Request) {
+func delCookies(w http.ResponseWriter) {
+	setCookies("", w)
+}
+
+func setCookies(code string, w http.ResponseWriter) {
 	cookie := http.Cookie{
 		Name:  cookieName,
 		Value: code,
@@ -17,7 +21,7 @@ func setOauthCookies(code string, w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &cookie)
 }
 
-func getOauthCookies(r *http.Request) string {
+func getCookies(r *http.Request) string {
 	c, err := r.Cookie(cookieName)
 	if err != nil {
 		return ""

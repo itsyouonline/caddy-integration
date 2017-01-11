@@ -11,6 +11,7 @@ oauth {
     callback_path   /_iyo_callback
     login_path      /_iyo_login
     scopes          user:memberof:mylab
+    redirect_url    http://localhost:2015/_iyo_callback
 }
 
 

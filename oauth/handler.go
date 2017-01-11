@@ -15,8 +15,9 @@ var (
 )
 
 type token struct {
-	Scope string `json:"scope"`
-	Info  struct {
+	AccessToken string `json:"access_token"`
+	Scope       string `json:"scope"`
+	Info        struct {
 		Username string `json:"username"`
 	} `json:"info"`
 }
@@ -50,15 +51,22 @@ func (h handler) serveLogin(w http.ResponseWriter, r *http.Request) (int, error)
 
 // server oauth2 callback page
 func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, error) {
+	// get authorization code
 	code := r.FormValue("code")
 	if code == "" {
 		return 401, nil
 	}
-	setOauthCookies(code, w, r)
-	t, err := h.getToken(code)
-	if err == nil {
-		fmt.Printf("token=%#v", t)
+
+	// get JWT token from IYO server
+	jwtToken, err := h.getJWTToken(code)
+	if err != nil {
+		h.writeError(w, 500, err.Error())
+		return 500, err
 	}
+
+	// save JWT token in cookies
+	setCookies(jwtToken, w)
+
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	return http.StatusTemporaryRedirect, nil
 }
@@ -70,27 +78,23 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 			continue
 		}
 
-		// get oauth code from cookies
-		code := h.getOauthCode(r)
-		if code == "" {
-			fmt.Println("oauth code not found, ask for login")
+		// get JWT token from cookies
+		token := h.getJWTTokenFromCookies(r)
+		if token == "" {
 			return h.serveLogin(w, r)
 		}
 
-		// get access token
-		token, err := h.getToken(code)
-		if err != nil {
-			fmt.Printf("failed to get oauth access token:%v\n", err)
-			setOauthCookies("", w, r)
-			return 401, fmt.Errorf("failed to get oauth token:%v", err)
+		// verify jwt token
+		if err := h.verifyJWTToken(token); err != nil {
+			delCookies(w)
+			h.writeError(w, 500, err.Error())
+			return 500, err
 		}
-		fmt.Printf("token=%#v", token)
 	}
 	return h.Next.ServeHTTP(w, r)
 }
 
 func (h handler) getToken(code string) (*token, error) {
-	fmt.Printf("get token=%v\n", code)
 	// build request
 	req, err := http.NewRequest("POST", h.OauthConf.Endpoint.TokenURL, nil)
 	if err != nil {
@@ -102,7 +106,7 @@ func (h handler) getToken(code string) (*token, error) {
 	q.Add("client_secret", h.OauthConf.ClientSecret)
 	q.Add("code", code)
 	q.Add("redirect_uri", h.OauthConf.RedirectURL)
-	//q.Add("state", oauthState)
+	q.Add("state", oauthState)
 	req.URL.RawQuery = q.Encode()
 
 	// do request
@@ -127,8 +131,8 @@ func (h handler) getToken(code string) (*token, error) {
 	return &t, nil
 }
 
-func (h handler) getOauthCode(r *http.Request) string {
-	return getOauthCookies(r)
+func (h handler) getJWTTokenFromCookies(r *http.Request) string {
+	return getCookies(r)
 }
 
 func (h handler) writeError(w http.ResponseWriter, code int, msg string) (int, error) {
