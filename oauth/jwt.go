@@ -11,7 +11,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-var JWTPublicKey *ecdsa.PublicKey
+var jwtPubKey *ecdsa.PublicKey
 
 const (
 	iyoPubKey = `-----BEGIN PUBLIC KEY-----
@@ -21,38 +21,39 @@ MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAES5X8XrfKdx9gYayFITc89wad4usrk0n2
 -----END PUBLIC KEY-----`
 )
 
+type jwtInfo struct {
+	Username string
+	Scopes   []string
+}
+
 func init() {
 	var err error
 
-	JWTPublicKey, err = jwt.ParseECPublicKeyFromPEM([]byte(iyoPubKey))
+	jwtPubKey, err = jwt.ParseECPublicKeyFromPEM([]byte(iyoPubKey))
 	if err != nil {
 		log.Fatalf("failed to parse pub key:%v", err)
 	}
 }
 
-func (h handler) verifyJWTToken(tokenStr string) error {
+func (h handler) verifyJWTToken(tokenStr string) (*jwtInfo, error) {
 	// verify token
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if token.Method != jwt.SigningMethodES384 {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		return JWTPublicKey, nil
+		return jwtPubKey, nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// get claims
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !(ok && token.Valid) {
-		return fmt.Errorf("invalid token")
+		return nil, fmt.Errorf("invalid token")
 	}
 
 	// check scopes
-	if len(h.OauthConf.Scopes) == 0 {
-		return nil
-	}
-
 	var scopes []string
 	for _, v := range claims["scope"].([]interface{}) {
 		scopes = append(scopes, v.(string))
@@ -67,12 +68,18 @@ func (h handler) verifyJWTToken(tokenStr string) error {
 		return false
 	}
 
-	for _, s := range h.OauthConf.Scopes {
-		if !inScopes(s) {
-			return fmt.Errorf("user doesn't have `%v` scope", s)
+	if len(h.OauthConf.Scopes) > 0 {
+		for _, s := range h.OauthConf.Scopes {
+			if !inScopes(s) {
+				return nil, fmt.Errorf("user doesn't have `%v` scope", s)
+			}
 		}
 	}
-	return nil
+
+	return &jwtInfo{
+		Username: claims["username"].(string),
+		Scopes:   scopes,
+	}, nil
 }
 
 func (h handler) getJWTToken(code string) (int64, string, error) {

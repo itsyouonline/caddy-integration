@@ -86,11 +86,14 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 
 		// verify jwt token
-		if err := h.verifyJWTToken(token); err != nil {
+		info, err := h.verifyJWTToken(token)
+		if err != nil {
 			delCookies(w)
 			h.writeError(w, 500, err.Error())
 			return 500, err
 		}
+
+		logRequest(w, r, info)
 	}
 	return h.Next.ServeHTTP(w, r)
 }
