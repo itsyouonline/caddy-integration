@@ -1,0 +1,138 @@
+package oauth
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/mholt/caddy/caddyhttp/httpserver"
+	"golang.org/x/oauth2"
+)
+
+var (
+	oauthState = "random"
+)
+
+type token struct {
+	Scope string `json:"scope"`
+	Info  struct {
+		Username string `json:"username"`
+	} `json:"info"`
+}
+
+type handler struct {
+	LoginPath    string
+	CallbackPath string
+	OauthConf    *oauth2.Config
+	Paths        []string
+	Next         httpserver.Handler
+	hc           http.Client
+}
+
+func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
+	switch {
+	case httpserver.Path(r.URL.Path).Matches(h.LoginPath):
+		return h.serveLogin(w, r)
+	case httpserver.Path(r.URL.Path).Matches(h.CallbackPath):
+		return h.serveCallback(w, r)
+	default:
+		return h.serveHTTP(w, r)
+	}
+}
+
+// server oauth2 login page
+func (h handler) serveLogin(w http.ResponseWriter, r *http.Request) (int, error) {
+	url := h.OauthConf.AuthCodeURL(oauthState)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	return http.StatusTemporaryRedirect, nil
+}
+
+// server oauth2 callback page
+func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, error) {
+	code := r.FormValue("code")
+	if code == "" {
+		return 401, nil
+	}
+	setOauthCookies(code, w, r)
+	t, err := h.getToken(code)
+	if err == nil {
+		fmt.Printf("token=%#v", t)
+	}
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	return http.StatusTemporaryRedirect, nil
+}
+
+// serve other dirs
+func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
+	for _, p := range h.Paths {
+		if !httpserver.Path(r.URL.Path).Matches(p) {
+			continue
+		}
+
+		// get oauth code from cookies
+		code := h.getOauthCode(r)
+		if code == "" {
+			fmt.Println("oauth code not found, ask for login")
+			return h.serveLogin(w, r)
+		}
+
+		// get access token
+		token, err := h.getToken(code)
+		if err != nil {
+			fmt.Printf("failed to get oauth access token:%v\n", err)
+			setOauthCookies("", w, r)
+			return 401, fmt.Errorf("failed to get oauth token:%v", err)
+		}
+		fmt.Printf("token=%#v", token)
+	}
+	return h.Next.ServeHTTP(w, r)
+}
+
+func (h handler) getToken(code string) (*token, error) {
+	fmt.Printf("get token=%v\n", code)
+	// build request
+	req, err := http.NewRequest("POST", h.OauthConf.Endpoint.TokenURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	q.Add("client_id", h.OauthConf.ClientID)
+	q.Add("client_secret", h.OauthConf.ClientSecret)
+	q.Add("code", code)
+	q.Add("redirect_uri", h.OauthConf.RedirectURL)
+	//q.Add("state", oauthState)
+	req.URL.RawQuery = q.Encode()
+
+	// do request
+	resp, err := h.hc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// decode response
+	var t token
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read body:%v", err)
+	}
+
+	err = json.Unmarshal(body, &t)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshall:%v,body:%v", err, string(body))
+	}
+	return &t, nil
+}
+
+func (h handler) getOauthCode(r *http.Request) string {
+	return getOauthCookies(r)
+}
+
+func (h handler) writeError(w http.ResponseWriter, code int, msg string) (int, error) {
+	w.WriteHeader(code)
+	w.Write([]byte(msg))
+	return code, nil
+}
