@@ -27,6 +27,7 @@ type handler struct {
 	LoginPath    string
 	CallbackPath string
 	OauthConf    *oauth2.Config
+	Usernames    map[string]struct{} // allowed usernames, empty to allow all
 	Paths        []string
 	Next         httpserver.Handler
 	hc           http.Client

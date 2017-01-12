@@ -21,6 +21,7 @@ type config struct {
 	AuthURL      string
 	TokenURL     string
 	Scopes       []string
+	Usernames    map[string]struct{}
 }
 
 func init() {
@@ -66,6 +67,7 @@ func setup(c *caddy.Controller) error {
 			Paths:        conf.Paths,
 			Next:         next,
 			hc:           http.Client{},
+			Usernames:    conf.Usernames,
 		}
 	})
 	return nil
@@ -80,6 +82,7 @@ func parse(c *caddy.Controller) (config, error) {
 	*/
 	var err error
 	conf := config{}
+	var usernames []string
 	for c.Next() {
 		args := c.RemainingArgs()
 		switch len(args) {
@@ -92,7 +95,7 @@ func parse(c *caddy.Controller) (config, error) {
 					if err != nil {
 						return conf, err
 					}
-					conf.Paths = append(conf.Paths, p)
+					conf.Paths = append(conf.Paths, strings.Split(p, ",")...)
 				case "redirect_url":
 					conf.RedirectURL, err = parseOne(c)
 				case "client_id":
@@ -104,12 +107,18 @@ func parse(c *caddy.Controller) (config, error) {
 				case "token_url":
 					conf.TokenURL, err = parseOne(c)
 				case "scopes":
-					var str string
-					str, err = parseOne(c)
+					str, err := parseOne(c)
 					if err != nil {
 						return conf, err
 					}
 					conf.Scopes = append(conf.Scopes, strings.Split(str, ",")...)
+				case "usernames":
+					str, err := parseOne(c)
+					if err != nil {
+						return conf, err
+					}
+					usernames = append(usernames, strings.Split(str, ",")...)
+
 				}
 				if err != nil {
 					return conf, err
@@ -128,6 +137,11 @@ func parse(c *caddy.Controller) (config, error) {
 	}
 	if conf.TokenURL == "" {
 		conf.TokenURL = "https://itsyou.online/v1/oauth/access_token"
+	}
+
+	conf.Usernames = map[string]struct{}{}
+	for _, u := range usernames {
+		conf.Usernames[u] = struct{}{}
 	}
 
 	redirURL, err := url.Parse(conf.RedirectURL)

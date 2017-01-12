@@ -9,7 +9,7 @@ go get github.com/caddyserver/caddydev
 
 Create `Caddyfile` based on `Caddyfile.example` file
 
-run it
+Run it
 ```
 caddydev
 ```

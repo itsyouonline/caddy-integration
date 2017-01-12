@@ -4,8 +4,8 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/dgrijalva/jwt-go"
@@ -31,7 +31,8 @@ func init() {
 
 	jwtPubKey, err = jwt.ParseECPublicKeyFromPEM([]byte(iyoPubKey))
 	if err != nil {
-		log.Fatalf("failed to parse pub key:%v", err)
+		fmt.Printf("failed to parse pub key:%v\n", err)
+		os.Exit(1)
 	}
 }
 
@@ -54,32 +55,50 @@ func (h handler) verifyJWTToken(tokenStr string) (*jwtInfo, error) {
 	}
 
 	// check scopes
-	var scopes []string
-	for _, v := range claims["scope"].([]interface{}) {
-		scopes = append(scopes, v.(string))
-	}
+	ok = func() bool {
+		// if no scopes specified, ignore it
+		if len(h.OauthConf.Scopes) == 0 {
+			return true
+		}
 
-	inScopes := func(scope string) bool {
-		for _, s := range scopes {
-			if s == scope {
+		for _, v := range claims["scope"].([]interface{}) {
+			scope := v.(string)
+			if inArray(scope, h.OauthConf.Scopes) {
 				return true
 			}
 		}
 		return false
+	}()
+	if !ok {
+		return nil, fmt.Errorf("user doesn't have one of  `%v` scope", h.OauthConf.Scopes)
 	}
 
-	if len(h.OauthConf.Scopes) > 0 {
-		for _, s := range h.OauthConf.Scopes {
-			if !inScopes(s) {
-				return nil, fmt.Errorf("user doesn't have `%v` scope", s)
-			}
+	// check usernames
+	username := claims["username"].(string)
+	ok = func() bool {
+		if len(h.Usernames) == 0 {
+			return true
 		}
+		_, exists := h.Usernames[username]
+		return exists
+	}()
+	if !ok {
+		return nil, fmt.Errorf("username `%v` not allowed to access this resource", username)
 	}
 
 	return &jwtInfo{
-		Username: claims["username"].(string),
-		Scopes:   scopes,
+		Username: username,
 	}, nil
+}
+
+// check if string `str` exist in array `arr`
+func inArray(str string, arr []string) bool {
+	for _, s := range arr {
+		if s == str {
+			return true
+		}
+	}
+	return false
 }
 
 func (h handler) getJWTToken(code string) (int64, string, error) {
