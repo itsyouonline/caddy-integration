@@ -1,6 +1,6 @@
 # caddy oauth middleware
 
-## using it
+## using it in development
 
 Install caddydev
 ```
@@ -15,3 +15,12 @@ caddydev
 ```
 
 It will serve this directory
+
+## using it in production
+
+Add below import line in Caddy's [run.go](https://github.com/mholt/caddy/blob/master/caddy/caddymain/run.go)
+```
+_ "github.com/itsyouonline/caddy-integration/oauth"
+```
+
+Then build caddy as usual
