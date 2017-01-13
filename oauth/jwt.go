@@ -129,6 +129,10 @@ func (h handler) getJWTToken(code string) (int64, string, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		return 0, "", fmt.Errorf("code=%v", resp.StatusCode)
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	return token.ExpiresIn, string(body), err
 }

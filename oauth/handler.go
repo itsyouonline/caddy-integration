@@ -24,6 +24,7 @@ type token struct {
 }
 
 type handler struct {
+	Name         string
 	LoginPath    string
 	CallbackPath string
 	OauthConf    *oauth2.Config
@@ -65,7 +66,7 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 	}
 
 	// save JWT token in cookies
-	setCookies(jwtToken, expire, w)
+	h.setCookies(jwtToken, expire, w)
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	return http.StatusTemporaryRedirect, nil
@@ -87,7 +88,7 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		// verify jwt token
 		info, err := h.verifyJWTToken(token)
 		if err != nil {
-			delCookies(w)
+			h.delCookies(w)
 			h.writeError(w, 500, err.Error())
 			return 500, err
 		}
@@ -128,14 +129,11 @@ func (h handler) getToken(code string) (*token, error) {
 	}
 
 	err = json.Unmarshal(body, &t)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshall:%v,body:%v", err, string(body))
-	}
-	return &t, nil
+	return &t, err
 }
 
 func (h handler) getJWTTokenFromCookies(r *http.Request) string {
-	return getCookies(r)
+	return h.getCookies(r)
 }
 
 func (h handler) writeError(w http.ResponseWriter, code int, msg string) (int, error) {

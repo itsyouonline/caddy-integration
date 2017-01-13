@@ -5,17 +5,17 @@ import (
 	"time"
 )
 
-const (
-	cookieName = "caddyoauth"
-)
-
-func delCookies(w http.ResponseWriter) {
-	setCookies("", 0, w)
+func (h handler) cookieName() string {
+	return "oauth" + h.Name
 }
 
-func setCookies(code string, expire int64, w http.ResponseWriter) {
+func (h handler) delCookies(w http.ResponseWriter) {
+	h.setCookies("", 0, w)
+}
+
+func (h handler) setCookies(code string, expire int64, w http.ResponseWriter) {
 	cookie := http.Cookie{
-		Name:    cookieName,
+		Name:    h.cookieName(),
 		Value:   code,
 		Path:    "/",
 		Expires: time.Now().Add(time.Second * time.Duration(expire)),
@@ -23,8 +23,8 @@ func setCookies(code string, expire int64, w http.ResponseWriter) {
 	http.SetCookie(w, &cookie)
 }
 
-func getCookies(r *http.Request) string {
-	c, err := r.Cookie(cookieName)
+func (h handler) getCookies(r *http.Request) string {
+	c, err := r.Cookie(h.cookieName())
 	if err != nil {
 		return ""
 	}

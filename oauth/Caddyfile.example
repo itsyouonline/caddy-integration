@@ -31,7 +31,7 @@ oauth {
 
     # scopes allowed to access this protected paths
     # leave it blank if you want to ignore it
-    scopes          user:memberof:mylab
+    organizations   mylab
 
     # usernames allowed to access this protected paths
     # leave it blank to allow all usernames

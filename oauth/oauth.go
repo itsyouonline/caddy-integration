@@ -13,6 +13,7 @@ import (
 )
 
 type config struct {
+	Name         string
 	Paths        []string
 	RedirectURL  string
 	CallbackPath string
@@ -62,6 +63,7 @@ func setup(c *caddy.Controller) error {
 
 	httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
 		return &handler{
+			Name:         conf.Name,
 			OauthConf:    oauthConfig,
 			CallbackPath: conf.CallbackPath,
 			Paths:        conf.Paths,
@@ -81,8 +83,10 @@ func parse(c *caddy.Controller) (config, error) {
 		}
 	*/
 	var err error
-	conf := config{}
 	var usernames []string
+
+	conf := config{}
+
 	for c.Next() {
 		args := c.RemainingArgs()
 		switch len(args) {
@@ -90,6 +94,8 @@ func parse(c *caddy.Controller) (config, error) {
 			// no argument passed, check the config block
 			for c.NextBlock() {
 				switch c.Val() {
+				case "name":
+					conf.Name, err = parseOne(c)
 				case "path":
 					p, err := parseOne(c)
 					if err != nil {
@@ -106,12 +112,15 @@ func parse(c *caddy.Controller) (config, error) {
 					conf.AuthURL, err = parseOne(c)
 				case "token_url":
 					conf.TokenURL, err = parseOne(c)
-				case "scopes":
+				case "organizations":
 					str, err := parseOne(c)
 					if err != nil {
 						return conf, err
 					}
-					conf.Scopes = append(conf.Scopes, strings.Split(str, ",")...)
+					for _, s := range strings.Split(str, ",") {
+						scope := "user:memberof:" + strings.TrimSpace(s)
+						conf.Scopes = append(conf.Scopes, scope)
+					}
 				case "usernames":
 					str, err := parseOne(c)
 					if err != nil {
@@ -129,8 +138,8 @@ func parse(c *caddy.Controller) (config, error) {
 			return conf, c.ArgErr()
 		}
 	}
-	if conf.RedirectURL == "" || conf.ClientID == "" || conf.ClientSecret == "" {
-		return conf, fmt.Errorf("redirect_url, client_id, and client_secret can't be blank")
+	if conf.Name == "" || conf.RedirectURL == "" || conf.ClientID == "" || conf.ClientSecret == "" {
+		return conf, fmt.Errorf("name, redirect_url, client_id, and client_secret can't be empty")
 	}
 	if conf.AuthURL == "" {
 		conf.AuthURL = "https://itsyou.online/v1/oauth/authorize"
@@ -139,11 +148,13 @@ func parse(c *caddy.Controller) (config, error) {
 		conf.TokenURL = "https://itsyou.online/v1/oauth/access_token"
 	}
 
+	// usernames
 	conf.Usernames = map[string]struct{}{}
 	for _, u := range usernames {
 		conf.Usernames[u] = struct{}{}
 	}
 
+	// callback path
 	redirURL, err := url.Parse(conf.RedirectURL)
 	if err != nil {
 		return conf, err
