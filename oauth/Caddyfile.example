@@ -5,11 +5,6 @@ browse
 log /tmp/access.log
 
 oauth {
-    # path is the path you want to protect
-    # you can specify multiple paths
-	path            /data/
-	path            /data2/
-
     # itsyou.online client ID
     client_id       mylab
 
@@ -29,14 +24,15 @@ oauth {
     # oauth2 redirect URL
     redirect_url    http://localhost:2015/_iyo_callback
 
-    # scopes allowed to access this protected paths
+    # Organizations allowed to access the protected paths
     # leave it blank if you want to ignore it
-    organizations   mylab
+    organizations   /developer  mylab.developer
+    organizations   /manager    mylab.manager
 
     # usernames allowed to access this protected paths
     # leave it blank to allow all usernames
     # - each username need to be separated with `,`
     # - you can specify it in multiple lines
-    usernames       dodo,jon,ibk
+    usernames       /manager    iwan
 }
 

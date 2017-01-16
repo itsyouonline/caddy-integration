@@ -6,8 +6,8 @@ This plugin protects resource paths using itsyou.online oauth2.
 
 Plugin features:
 
-- protects paths based on oauth2 `scope`
-- protects paths based on oauth2 username
+- protects paths based on organization membership
+- protects paths based on username
 - use JWT to make it stateless and reduce API calls to Oauth2 server
 - log following infos to stdout : host, time, http verb, path, http method, username
 
@@ -17,11 +17,6 @@ Add oauth block to Caddyfile
 example
 ```
 oauth {
-    # path is the path you want to protect
-    # you can specify multiple paths
-	  path            /data/
-	  path            /data2/
-
     # itsyou.online client ID
     client_id       mylab
 
@@ -41,23 +36,25 @@ oauth {
     # oauth2 redirect URL
     redirect_url    http://localhost:2015/_iyo_callback
 
-    # scopes allowed to access this protected paths
+    # Organizations allowed to access the protected paths
     # leave it blank if you want to ignore it
-    scopes          user:memberof:mylab
+    organizations   /developer  mylab.developer
+    organizations   /manager    mylab.manager
 
     # usernames allowed to access this protected paths
     # leave it blank to allow all usernames
     # - each username need to be separated with `,`
     # - you can specify it in multiple lines
-    usernames       dodo,jon,ibk
+    usernames       /manager    iwan
 }
+
 ```
 
 ## Limitations
 
 Limitations:
 
-- can only specify one organization because of IYO limitation
+- each path can only specify one organization because of IYO limitation
 
 ## Build and Run in Development
 

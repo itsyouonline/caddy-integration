@@ -13,15 +13,21 @@ import (
 )
 
 type config struct {
-	Paths        []string
-	RedirectURL  string
-	CallbackPath string
-	ClientID     string
-	ClientSecret string
-	AuthURL      string
-	TokenURL     string
-	Scopes       []string
-	Usernames    map[string]struct{}
+	RedirectURL   string
+	CallbackPath  string
+	ClientID      string
+	ClientSecret  string
+	AuthURL       string
+	TokenURL      string
+	Organizations map[string][]string
+	Usernames     map[string][]string
+}
+
+func newConfig() config {
+	return config{
+		Organizations: map[string][]string{},
+		Usernames:     map[string][]string{},
+	}
 }
 
 func init() {
@@ -49,41 +55,55 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 
-	oauthConfig := &oauth2.Config{
-		RedirectURL:  conf.RedirectURL,
-		ClientID:     conf.ClientID,
-		ClientSecret: conf.ClientSecret,
-		Scopes:       conf.Scopes,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  conf.AuthURL,
-			TokenURL: conf.TokenURL,
-		},
+	oauthConfs := map[string]*oauth2.Config{}
+
+	// create oauth conf for organizations
+	for path, orgs := range conf.Organizations {
+		var scopes []string
+		for _, org := range orgs {
+			scopes = append(scopes, "user:memberof:"+org)
+		}
+		oauthConfs[path] = newOauthConf(conf, scopes)
+	}
+
+	// create oauth conf for usernames
+	for path := range conf.Usernames {
+		if _, ok := oauthConfs[path]; ok {
+			continue
+		}
+		oauthConfs[path] = newOauthConf(conf, []string{})
 	}
 
 	httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
 		return &handler{
-			OauthConf:    oauthConfig,
-			CallbackPath: conf.CallbackPath,
-			Paths:        conf.Paths,
-			Next:         next,
-			hc:           http.Client{},
-			Usernames:    conf.Usernames,
+			CallbackPath:  conf.CallbackPath,
+			Next:          next,
+			hc:            http.Client{},
+			OauthConfs:    oauthConfs,
+			Usernames:     conf.Usernames,
+			Organizations: conf.Organizations,
 		}
 	})
 	return nil
 }
 
+func newOauthConf(conf config, scopes []string) *oauth2.Config {
+	return &oauth2.Config{
+		RedirectURL:  conf.RedirectURL,
+		ClientID:     conf.ClientID,
+		ClientSecret: conf.ClientSecret,
+		Scopes:       scopes,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  conf.AuthURL,
+			TokenURL: conf.TokenURL,
+		},
+	}
+}
+
 func parse(c *caddy.Controller) (config, error) {
 	// This parses the following config blocks
-	/*
-		oauth {
-			path /hello
-		}
-	*/
 	var err error
-	var usernames []string
-
-	conf := config{}
+	conf := newConfig()
 
 	for c.Next() {
 		args := c.RemainingArgs()
@@ -92,12 +112,6 @@ func parse(c *caddy.Controller) (config, error) {
 			// no argument passed, check the config block
 			for c.NextBlock() {
 				switch c.Val() {
-				case "path":
-					p, err := parseOne(c)
-					if err != nil {
-						return conf, err
-					}
-					conf.Paths = append(conf.Paths, strings.Split(p, ",")...)
 				case "redirect_url":
 					conf.RedirectURL, err = parseOne(c)
 				case "client_id":
@@ -109,21 +123,17 @@ func parse(c *caddy.Controller) (config, error) {
 				case "token_url":
 					conf.TokenURL, err = parseOne(c)
 				case "organizations":
-					str, err := parseOne(c)
+					path, orgs, err := parseTwo(c)
 					if err != nil {
 						return conf, err
 					}
-					for _, s := range strings.Split(str, ",") {
-						scope := "user:memberof:" + strings.TrimSpace(s)
-						conf.Scopes = append(conf.Scopes, scope)
-					}
+					conf.Organizations[path] = strings.Split(orgs, ",")
 				case "usernames":
-					str, err := parseOne(c)
+					path, usernames, err := parseTwo(c)
 					if err != nil {
 						return conf, err
 					}
-					usernames = append(usernames, strings.Split(str, ",")...)
-
+					conf.Usernames[path] = strings.Split(usernames, ",")
 				}
 				if err != nil {
 					return conf, err
@@ -142,12 +152,6 @@ func parse(c *caddy.Controller) (config, error) {
 	}
 	if conf.TokenURL == "" {
 		conf.TokenURL = "https://itsyou.online/v1/oauth/access_token"
-	}
-
-	// usernames
-	conf.Usernames = map[string]struct{}{}
-	for _, u := range usernames {
-		conf.Usernames[u] = struct{}{}
 	}
 
 	// callback path
@@ -172,6 +176,14 @@ func parseOne(c *caddy.Controller) (string, error) {
 		return "", c.ArgErr()
 	}
 	return val, nil
+}
+
+func parseTwo(c *caddy.Controller) (string, string, error) {
+	args := c.RemainingArgs()
+	if len(args) != 2 {
+		return "", "", fmt.Errorf("expected 2 args, get %v args", len(args))
+	}
+	return args[0], args[1], nil
 }
 
 func init() {

@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/oauth2"
 )
 
 var jwtPubKey *ecdsa.PublicKey
@@ -35,7 +36,7 @@ func init() {
 	}
 }
 
-func (h handler) verifyJWTToken(tokenStr string) (*jwtInfo, error) {
+func (h handler) verifyJWTToken(conf *oauth2.Config, tokenStr string) (*jwtInfo, error) {
 	// verify token
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if token.Method != jwt.SigningMethodES384 {
@@ -54,7 +55,7 @@ func (h handler) verifyJWTToken(tokenStr string) (*jwtInfo, error) {
 	}
 
 	username, okUsername := h.checkUsername(claims)
-	if !okUsername && !h.checkScope(claims) {
+	if !okUsername && !h.checkScope(conf.Scopes, claims) {
 		return nil, fmt.Errorf("not allowed to access this resource")
 	}
 
@@ -75,8 +76,8 @@ func (h handler) checkUsername(claims map[string]interface{}) (string, bool) {
 	return username, exists
 }
 
-func (h handler) checkScope(claims map[string]interface{}) bool {
-	if len(h.OauthConf.Scopes) == 0 {
+func (h handler) checkScope(scopes []string, claims map[string]interface{}) bool {
+	if len(scopes) == 0 {
 		return false
 	}
 
@@ -85,7 +86,7 @@ func (h handler) checkScope(claims map[string]interface{}) bool {
 		if !ok {
 			continue
 		}
-		if inArray(scope, h.OauthConf.Scopes) {
+		if inArray(scope, scopes) {
 			return true
 		}
 	}
@@ -103,15 +104,15 @@ func inArray(str string, arr []string) bool {
 }
 
 // get JWT token from oauth2 authorization code
-func (h handler) getJWTToken(code string) (int64, string, error) {
+func (h handler) getJWTToken(conf *oauth2.Config, code, state string) (int64, string, error) {
 	// get oauth2 token
-	token, err := h.getToken(code)
+	token, err := h.getToken(conf, code, state)
 	if err != nil {
 		return 0, "", err
 	}
 
 	// get JWT token with scope of each organization
-	for _, scope := range h.OauthConf.Scopes {
+	for _, scope := range conf.Scopes {
 		jwtToken, err := h.getJWTTokenScope(token.AccessToken, scope)
 		if err == nil && jwtToken != "" {
 			return token.ExpiresIn, jwtToken, nil
