@@ -54,41 +54,43 @@ func (h handler) verifyJWTToken(tokenStr string) (*jwtInfo, error) {
 		return nil, fmt.Errorf("invalid token")
 	}
 
-	// check scopes
-	ok = func() bool {
-		// if no scopes specified, ignore it
-		if len(h.OauthConf.Scopes) == 0 {
-			return true
-		}
-
-		for _, v := range claims["scope"].([]interface{}) {
-			scope := v.(string)
-			if inArray(scope, h.OauthConf.Scopes) {
-				return true
-			}
-		}
-		return false
-	}()
-	if !ok {
-		return nil, fmt.Errorf("user doesn't have one of  `%v` scope", h.OauthConf.Scopes)
-	}
-
-	// check usernames
-	username := claims["username"].(string)
-	ok = func() bool {
-		if len(h.Usernames) == 0 {
-			return true
-		}
-		_, exists := h.Usernames[username]
-		return exists
-	}()
-	if !ok {
-		return nil, fmt.Errorf("username `%v` not allowed to access this resource", username)
+	username, okUsername := h.checkUsername(claims)
+	if !okUsername && !h.checkScope(claims) {
+		return nil, fmt.Errorf("not allowed to access this resource")
 	}
 
 	return &jwtInfo{
 		Username: username,
 	}, nil
+}
+
+func (h handler) checkUsername(claims map[string]interface{}) (string, bool) {
+	if len(h.Usernames) == 0 {
+		return "", false
+	}
+	username, ok := claims["username"].(string)
+	if !ok {
+		return "", false
+	}
+	_, exists := h.Usernames[username]
+	return username, exists
+}
+
+func (h handler) checkScope(claims map[string]interface{}) bool {
+	if len(h.OauthConf.Scopes) == 0 {
+		return false
+	}
+
+	for _, v := range claims["scope"].([]interface{}) {
+		scope, ok := v.(string)
+		if !ok {
+			continue
+		}
+		if inArray(scope, h.OauthConf.Scopes) {
+			return true
+		}
+	}
+	return false
 }
 
 // check if string `str` exist in array `arr`
@@ -101,6 +103,7 @@ func inArray(str string, arr []string) bool {
 	return false
 }
 
+// get JWT token from oauth2 authorization code
 func (h handler) getJWTToken(code string) (int64, string, error) {
 	// get oauth2 token
 	token, err := h.getToken(code)
