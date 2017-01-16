@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/dgrijalva/jwt-go"
 )
@@ -111,31 +110,43 @@ func (h handler) getJWTToken(code string) (int64, string, error) {
 		return 0, "", err
 	}
 
+	// get JWT token with scope of each organization
+	for _, scope := range h.OauthConf.Scopes {
+		jwtToken, err := h.getJWTTokenScope(token.AccessToken, scope)
+		if err == nil && jwtToken != "" {
+			return token.ExpiresIn, jwtToken, nil
+		}
+	}
+	jwtToken, err := h.getJWTTokenScope(token.AccessToken, "")
+	return token.ExpiresIn, jwtToken, err
+}
+
+func (h handler) getJWTTokenScope(accessToken, scope string) (string, error) {
 	// build request
 	req, err := http.NewRequest("GET", "https://itsyou.online/v1/oauth/jwt", nil)
 	if err != nil {
-		return 0, "", err
+		return "", err
 	}
 
-	req.Header.Set("Authorization", "token "+token.AccessToken)
+	req.Header.Set("Authorization", "token "+accessToken)
 
-	if len(h.OauthConf.Scopes) > 0 {
+	if len(scope) > 0 {
 		q := req.URL.Query()
-		q.Add("scope", strings.Join(h.OauthConf.Scopes, ","))
+		q.Add("scope", scope)
 		req.URL.RawQuery = q.Encode()
 	}
 
 	// do request
 	resp, err := h.hc.Do(req)
 	if err != nil {
-		return 0, "", err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return 0, "", fmt.Errorf("code=%v", resp.StatusCode)
+		return "", fmt.Errorf("code=%v", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
-	return token.ExpiresIn, string(body), err
+	return string(body), err
 }
