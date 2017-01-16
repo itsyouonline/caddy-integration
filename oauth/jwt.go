@@ -36,7 +36,7 @@ func init() {
 	}
 }
 
-func (h handler) verifyJWTToken(conf *oauth2.Config, tokenStr string) (*jwtInfo, error) {
+func (h handler) verifyJWTToken(conf *oauth2.Config, protectedPath, tokenStr string) (*jwtInfo, error) {
 	// verify token
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if token.Method != jwt.SigningMethodES384 {
@@ -54,7 +54,7 @@ func (h handler) verifyJWTToken(conf *oauth2.Config, tokenStr string) (*jwtInfo,
 		return nil, fmt.Errorf("invalid token")
 	}
 
-	username, okUsername := h.checkUsername(claims)
+	username, okUsername := h.checkUsername(protectedPath, claims)
 	if !okUsername && !h.checkScope(conf.Scopes, claims) {
 		return nil, fmt.Errorf("not allowed to access this resource")
 	}
@@ -64,7 +64,7 @@ func (h handler) verifyJWTToken(conf *oauth2.Config, tokenStr string) (*jwtInfo,
 	}, nil
 }
 
-func (h handler) checkUsername(claims map[string]interface{}) (string, bool) {
+func (h handler) checkUsername(protectedPath string, claims map[string]interface{}) (string, bool) {
 	if len(h.Usernames) == 0 {
 		return "", false
 	}
@@ -72,8 +72,11 @@ func (h handler) checkUsername(claims map[string]interface{}) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	_, exists := h.Usernames[username]
-	return username, exists
+	usernames, exists := h.Usernames[protectedPath]
+	if !exists {
+		return "", false
+	}
+	return username, inArray(username, usernames)
 }
 
 func (h handler) checkScope(scopes []string, claims map[string]interface{}) bool {

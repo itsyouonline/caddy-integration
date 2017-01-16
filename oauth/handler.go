@@ -20,8 +20,7 @@ type token struct {
 }
 
 type handler struct {
-	CallbackPath string
-	//OauthConf     oauth2.Config
+	CallbackPath  string
 	OauthConfs    map[string]*oauth2.Config
 	Usernames     map[string][]string
 	Organizations map[string][]string
@@ -102,7 +101,7 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 
 		// verify jwt token
-		info, err := h.verifyJWTToken(conf, token)
+		info, err := h.verifyJWTToken(conf, p, token)
 		if err != nil {
 			h.delCookies(w)
 			h.writeError(w, 500, err.Error())
