@@ -24,7 +24,6 @@ type token struct {
 }
 
 type handler struct {
-	Name         string
 	LoginPath    string
 	CallbackPath string
 	OauthConf    *oauth2.Config

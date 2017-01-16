@@ -6,7 +6,7 @@ import (
 )
 
 func (h handler) cookieName() string {
-	return "oauth" + h.Name
+	return "caddyoauth"
 }
 
 func (h handler) delCookies(w http.ResponseWriter) {

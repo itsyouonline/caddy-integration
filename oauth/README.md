@@ -53,6 +53,12 @@ oauth {
 }
 ```
 
+## Limitations
+
+Limitations:
+
+- can only specify one organization because of IYO limitation
+
 ## Build and Run in Development
 
 Install caddydev

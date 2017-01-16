@@ -13,7 +13,6 @@ import (
 )
 
 type config struct {
-	Name         string
 	Paths        []string
 	RedirectURL  string
 	CallbackPath string
@@ -63,7 +62,6 @@ func setup(c *caddy.Controller) error {
 
 	httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
 		return &handler{
-			Name:         conf.Name,
 			OauthConf:    oauthConfig,
 			CallbackPath: conf.CallbackPath,
 			Paths:        conf.Paths,
@@ -94,8 +92,6 @@ func parse(c *caddy.Controller) (config, error) {
 			// no argument passed, check the config block
 			for c.NextBlock() {
 				switch c.Val() {
-				case "name":
-					conf.Name, err = parseOne(c)
 				case "path":
 					p, err := parseOne(c)
 					if err != nil {
@@ -138,8 +134,8 @@ func parse(c *caddy.Controller) (config, error) {
 			return conf, c.ArgErr()
 		}
 	}
-	if conf.Name == "" || conf.RedirectURL == "" || conf.ClientID == "" || conf.ClientSecret == "" {
-		return conf, fmt.Errorf("name, redirect_url, client_id, and client_secret can't be empty")
+	if conf.RedirectURL == "" || conf.ClientID == "" || conf.ClientSecret == "" {
+		return conf, fmt.Errorf("redirect_url, client_id, and client_secret can't be empty")
 	}
 	if conf.AuthURL == "" {
 		conf.AuthURL = "https://itsyou.online/v1/oauth/authorize"
