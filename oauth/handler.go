@@ -65,19 +65,19 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 	code := r.FormValue("code")
 	state := r.FormValue("state")
 	if code == "" || state == "" {
-		return 401, nil
+		return http.StatusUnauthorized, nil
 	}
 
 	conf, ok := h.OauthConfs[state]
 	if !ok {
-		return 401, fmt.Errorf("oauth2 config not found")
+		return http.StatusUnauthorized, fmt.Errorf("oauth2 config not found")
 	}
 
 	// get JWT token from IYO server
 	expire, jwtToken, err := h.getJWTToken(conf, code, state)
 	if err != nil {
-		h.writeError(w, 500, err.Error())
-		return 500, err
+		h.writeError(w, http.StatusUnauthorized, err.Error())
+		return http.StatusUnauthorized, err
 	}
 
 	// save JWT token in cookies
@@ -104,8 +104,8 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		info, err := h.verifyJWTToken(conf, p, token)
 		if err != nil {
 			h.delCookies(w)
-			h.writeError(w, 500, err.Error())
-			return 500, err
+			h.writeError(w, http.StatusUnauthorized, err.Error())
+			return http.StatusUnauthorized, err
 		}
 
 		logRequest(w, r, info)
@@ -153,6 +153,5 @@ func (h handler) getJWTTokenFromCookies(r *http.Request) string {
 
 func (h handler) writeError(w http.ResponseWriter, code int, msg string) (int, error) {
 	w.WriteHeader(code)
-	w.Write([]byte(msg))
 	return code, nil
 }
