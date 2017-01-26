@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/oauth2"
 )
 
 var jwtPubKey *ecdsa.PublicKey
@@ -36,7 +36,7 @@ func init() {
 	}
 }
 
-func (h handler) verifyJWTToken(tokenStr string) (*jwtInfo, error) {
+func (h handler) verifyJWTToken(conf *oauth2.Config, protectedPath, tokenStr string) (*jwtInfo, error) {
 	// verify token
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if token.Method != jwt.SigningMethodES384 {
@@ -54,41 +54,49 @@ func (h handler) verifyJWTToken(tokenStr string) (*jwtInfo, error) {
 		return nil, fmt.Errorf("invalid token")
 	}
 
-	// check scopes
-	ok = func() bool {
-		// if no scopes specified, ignore it
-		if len(h.OauthConf.Scopes) == 0 {
-			return true
-		}
-
-		for _, v := range claims["scope"].([]interface{}) {
-			scope := v.(string)
-			if inArray(scope, h.OauthConf.Scopes) {
-				return true
-			}
-		}
-		return false
-	}()
-	if !ok {
-		return nil, fmt.Errorf("user doesn't have one of  `%v` scope", h.OauthConf.Scopes)
-	}
-
-	// check usernames
-	username := claims["username"].(string)
-	ok = func() bool {
-		if len(h.Usernames) == 0 {
-			return true
-		}
-		_, exists := h.Usernames[username]
-		return exists
-	}()
-	if !ok {
-		return nil, fmt.Errorf("username `%v` not allowed to access this resource", username)
+	username, okUsername := h.checkUsername(protectedPath, claims)
+	if !okUsername && !h.checkScope(conf.Scopes, claims) {
+		return nil, fmt.Errorf("not allowed to access this resource")
 	}
 
 	return &jwtInfo{
 		Username: username,
 	}, nil
+}
+
+func (h handler) checkUsername(protectedPath string, claims map[string]interface{}) (string, bool) {
+	username, ok := claims["username"].(string)
+
+	if len(h.Usernames) == 0 {
+		return username, false
+	}
+
+	if !ok {
+		return username, false
+	}
+
+	usernames, exists := h.Usernames[protectedPath]
+	if !exists {
+		return username, false
+	}
+	return username, inArray(username, usernames)
+}
+
+func (h handler) checkScope(scopes []string, claims map[string]interface{}) bool {
+	if len(scopes) == 0 {
+		return false
+	}
+
+	for _, v := range claims["scope"].([]interface{}) {
+		scope, ok := v.(string)
+		if !ok {
+			continue
+		}
+		if inArray(scope, scopes) {
+			return true
+		}
+	}
+	return false
 }
 
 // check if string `str` exist in array `arr`
@@ -101,34 +109,51 @@ func inArray(str string, arr []string) bool {
 	return false
 }
 
-func (h handler) getJWTToken(code string) (int64, string, error) {
+// get JWT token from oauth2 authorization code
+func (h handler) getJWTToken(conf *oauth2.Config, code, state string) (int64, string, error) {
 	// get oauth2 token
-	token, err := h.getToken(code)
+	token, err := h.getToken(conf, code, state)
 	if err != nil {
 		return 0, "", err
 	}
 
+	// get JWT token with scope of each organization
+	for _, scope := range conf.Scopes {
+		jwtToken, err := h.getJWTTokenScope(token.AccessToken, scope)
+		if err == nil && jwtToken != "" {
+			return token.ExpiresIn, jwtToken, nil
+		}
+	}
+	jwtToken, err := h.getJWTTokenScope(token.AccessToken, "")
+	return token.ExpiresIn, jwtToken, err
+}
+
+func (h handler) getJWTTokenScope(accessToken, scope string) (string, error) {
 	// build request
 	req, err := http.NewRequest("GET", "https://itsyou.online/v1/oauth/jwt", nil)
 	if err != nil {
-		return 0, "", err
+		return "", err
 	}
 
-	req.Header.Set("Authorization", "token "+token.AccessToken)
+	req.Header.Set("Authorization", "token "+accessToken)
 
-	if len(h.OauthConf.Scopes) > 0 {
+	if len(scope) > 0 {
 		q := req.URL.Query()
-		q.Add("scope", strings.Join(h.OauthConf.Scopes, ","))
+		q.Add("scope", scope)
 		req.URL.RawQuery = q.Encode()
 	}
 
 	// do request
 	resp, err := h.hc.Do(req)
 	if err != nil {
-		return 0, "", err
+		return "", err
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("code=%v", resp.StatusCode)
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
-	return token.ExpiresIn, string(body), err
+	return string(body), err
 }

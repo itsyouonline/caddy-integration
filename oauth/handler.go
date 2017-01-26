@@ -10,10 +10,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var (
-	oauthState = "random"
-)
-
 type token struct {
 	AccessToken string `json:"access_token"`
 	Scope       string `json:"scope"`
@@ -24,13 +20,12 @@ type token struct {
 }
 
 type handler struct {
-	LoginPath    string
-	CallbackPath string
-	OauthConf    *oauth2.Config
-	Usernames    map[string]struct{} // allowed usernames, empty to allow all
-	Paths        []string
-	Next         httpserver.Handler
-	hc           http.Client
+	CallbackPath  string
+	OauthConfs    map[string]*oauth2.Config
+	Usernames     map[string][]string
+	Organizations map[string][]string
+	Next          httpserver.Handler
+	hc            http.Client
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
@@ -42,30 +37,51 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 	}
 }
 
+func (h handler) getPathConf(r *http.Request) (string, *oauth2.Config) {
+	for path, conf := range h.OauthConfs {
+		if httpserver.Path(r.URL.Path).Matches(path) {
+			return path, conf
+		}
+	}
+	return "", nil
+}
+
 // server oauth2 login page
 func (h handler) serveLogin(w http.ResponseWriter, r *http.Request) (int, error) {
-	url := h.OauthConf.AuthCodeURL(oauthState)
+	path, conf := h.getPathConf(r)
+	if conf == nil {
+		return 500, fmt.Errorf("null oauth conf when serving login page for path `%v`", r.URL.Path)
+	}
+
+	url := conf.AuthCodeURL(path)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 	return http.StatusTemporaryRedirect, nil
 }
 
 // server oauth2 callback page
 func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, error) {
+
 	// get authorization code
 	code := r.FormValue("code")
-	if code == "" {
-		return 401, nil
+	state := r.FormValue("state")
+	if code == "" || state == "" {
+		return http.StatusUnauthorized, nil
+	}
+
+	conf, ok := h.OauthConfs[state]
+	if !ok {
+		return http.StatusUnauthorized, fmt.Errorf("oauth2 config not found")
 	}
 
 	// get JWT token from IYO server
-	expire, jwtToken, err := h.getJWTToken(code)
+	expire, jwtToken, err := h.getJWTToken(conf, code, state)
 	if err != nil {
-		h.writeError(w, 500, err.Error())
-		return 500, err
+		h.writeError(w, http.StatusUnauthorized, err.Error())
+		return http.StatusUnauthorized, err
 	}
 
 	// save JWT token in cookies
-	setCookies(jwtToken, expire, w)
+	h.setCookies(jwtToken, expire, w)
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	return http.StatusTemporaryRedirect, nil
@@ -73,7 +89,7 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 
 // serve other dirs
 func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
-	for _, p := range h.Paths {
+	for p, conf := range h.OauthConfs {
 		if !httpserver.Path(r.URL.Path).Matches(p) {
 			continue
 		}
@@ -85,11 +101,11 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 
 		// verify jwt token
-		info, err := h.verifyJWTToken(token)
+		info, err := h.verifyJWTToken(conf, p, token)
 		if err != nil {
-			delCookies(w)
-			h.writeError(w, 500, err.Error())
-			return 500, err
+			h.delCookies(w)
+			h.writeError(w, http.StatusUnauthorized, err.Error())
+			return http.StatusUnauthorized, err
 		}
 
 		logRequest(w, r, info)
@@ -97,19 +113,19 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 	return h.Next.ServeHTTP(w, r)
 }
 
-func (h handler) getToken(code string) (*token, error) {
+func (h handler) getToken(conf *oauth2.Config, code, state string) (*token, error) {
 	// build request
-	req, err := http.NewRequest("POST", h.OauthConf.Endpoint.TokenURL, nil)
+	req, err := http.NewRequest("POST", conf.Endpoint.TokenURL, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	q := req.URL.Query()
-	q.Add("client_id", h.OauthConf.ClientID)
-	q.Add("client_secret", h.OauthConf.ClientSecret)
+	q.Add("client_id", conf.ClientID)
+	q.Add("client_secret", conf.ClientSecret)
 	q.Add("code", code)
-	q.Add("redirect_uri", h.OauthConf.RedirectURL)
-	q.Add("state", oauthState)
+	q.Add("redirect_uri", conf.RedirectURL)
+	q.Add("state", state)
 	req.URL.RawQuery = q.Encode()
 
 	// do request
@@ -128,18 +144,14 @@ func (h handler) getToken(code string) (*token, error) {
 	}
 
 	err = json.Unmarshal(body, &t)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshall:%v,body:%v", err, string(body))
-	}
-	return &t, nil
+	return &t, err
 }
 
 func (h handler) getJWTTokenFromCookies(r *http.Request) string {
-	return getCookies(r)
+	return h.getCookies(r)
 }
 
 func (h handler) writeError(w http.ResponseWriter, code int, msg string) (int, error) {
 	w.WriteHeader(code)
-	w.Write([]byte(msg))
 	return code, nil
 }
