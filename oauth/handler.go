@@ -21,12 +21,13 @@ type token struct {
 }
 
 type handler struct {
-	CallbackPath  string
-	OauthConfs    map[string]*oauth2.Config
-	Usernames     map[string][]string
-	Organizations map[string][]string
-	Next          httpserver.Handler
-	hc            http.Client
+	CallbackPath           string
+	OauthConfs             map[string]*oauth2.Config
+	Usernames              map[string][]string
+	Organizations          map[string][]string
+	AuthenticationRequired []string
+	Next                   httpserver.Handler
+	hc                     http.Client
 }
 
 func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) {

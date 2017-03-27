@@ -46,6 +46,10 @@ oauth {
     # - each username need to be separated with `,`
     # - you can specify it in multiple lines
     usernames       /manager    iwan
+
+    # Everyone is allowed to access this path but authentication is required.
+    # It is possible to specify this multiple times.
+    authentication_required /
 }
 
 ```

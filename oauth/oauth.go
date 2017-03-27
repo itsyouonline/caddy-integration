@@ -13,20 +13,22 @@ import (
 )
 
 type config struct {
-	RedirectURL   string
-	CallbackPath  string
-	ClientID      string
-	ClientSecret  string
-	AuthURL       string
-	TokenURL      string
-	Organizations map[string][]string
-	Usernames     map[string][]string
+	RedirectURL            string
+	CallbackPath           string
+	ClientID               string
+	ClientSecret           string
+	AuthURL                string
+	TokenURL               string
+	Organizations          map[string][]string
+	Usernames              map[string][]string
+	AuthenticationRequired []string
 }
 
 func newConfig() config {
 	return config{
-		Organizations: map[string][]string{},
-		Usernames:     map[string][]string{},
+		Organizations:          map[string][]string{},
+		Usernames:              map[string][]string{},
+		AuthenticationRequired: []string{},
 	}
 }
 
@@ -74,14 +76,22 @@ func setup(c *caddy.Controller) error {
 		oauthConfs[path] = newOauthConf(conf, []string{})
 	}
 
+	for _, path := range conf.AuthenticationRequired {
+		if _, ok := oauthConfs[path]; ok {
+			continue
+		}
+		oauthConfs[path] = newOauthConf(conf, []string{})
+	}
+
 	httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
 		return &handler{
-			CallbackPath:  conf.CallbackPath,
-			Next:          next,
-			hc:            http.Client{},
-			OauthConfs:    oauthConfs,
-			Usernames:     conf.Usernames,
-			Organizations: conf.Organizations,
+			CallbackPath:           conf.CallbackPath,
+			Next:                   next,
+			hc:                     http.Client{},
+			OauthConfs:             oauthConfs,
+			Usernames:              conf.Usernames,
+			Organizations:          conf.Organizations,
+			AuthenticationRequired: conf.AuthenticationRequired,
 		}
 	})
 	return nil
@@ -123,17 +133,23 @@ func parse(c *caddy.Controller) (config, error) {
 				case "token_url":
 					conf.TokenURL, err = parseOne(c)
 				case "organizations":
-					path, orgs, err := parseTwo(c)
-					if err != nil {
-						return conf, err
+					path, orgs, e := parseTwo(c)
+					if e != nil {
+						return conf, e
 					}
 					conf.Organizations[path] = strings.Split(orgs, ",")
 				case "usernames":
-					path, usernames, err := parseTwo(c)
-					if err != nil {
-						return conf, err
+					path, usernames, e := parseTwo(c)
+					if e != nil {
+						return conf, e
 					}
 					conf.Usernames[path] = strings.Split(usernames, ",")
+				case "authentication_required":
+					path, e := parseOne(c)
+					if e != nil {
+						return conf, e
+					}
+					conf.AuthenticationRequired = append(conf.AuthenticationRequired, path)
 				}
 				if err != nil {
 					return conf, err
