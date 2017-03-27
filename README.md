@@ -10,6 +10,8 @@ Plugin features:
 - protects paths based on username
 - use JWT to make it stateless and reduce API calls to Oauth2 server
 - log following infos to stdout : host, time, http verb, path, http method, username
+- sets a `X-Iyo-Username` header with the username of the logged in user
+
 
 ## Usage
 Add oauth block to Caddyfile
@@ -84,7 +86,7 @@ As described in https://github.com/mholt/caddy/wiki/Writing-a-Plugin:-Directives
 
 You need to add `oauth` in this [array](https://github.com/mholt/caddy/blob/d3860f95f59b5f18e14ddf3d67b4c44dbbfdb847/caddyhttp/httpserver/plugin.go#L314-L355).
 
-If you want this plugin to be executed before `browse`, you need to make sure to add it above `browse`.
+You need to make sure to add it above `proxy` and `browse` if you want these resources to be protected and the `X-Iyo-Username` to be set to proxied sites.
 
 ### Plug in your Plugin
 

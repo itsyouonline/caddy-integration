@@ -116,6 +116,7 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 			return http.StatusUnauthorized, err
 		}
 
+		r.Header.Set("X-Iyo-Username", info.Username)
 		logRequest(w, r, info)
 	}
 	return h.Next.ServeHTTP(w, r)
