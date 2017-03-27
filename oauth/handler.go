@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"golang.org/x/oauth2"
@@ -89,13 +90,19 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 
 // serve other dirs
 func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
+	//Check if a valid jwt is present in the `Authorization` header
+	authorizationHeader := r.Header.Get("Authorization")
+	token := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(authorizationHeader), "bearer"), "Bearer"))
+	if token == "" {
+		//Check if a jwt is present in a cookie (normally an interactive session through a browser)
+		token = h.getJWTTokenFromCookies(r)
+	}
+
 	for p, conf := range h.OauthConfs {
 		if !httpserver.Path(r.URL.Path).Matches(p) {
 			continue
 		}
 
-		// get JWT token from cookies
-		token := h.getJWTTokenFromCookies(r)
 		if token == "" {
 			return h.serveLogin(w, r)
 		}
