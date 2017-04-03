@@ -67,7 +67,9 @@ func (h handler) verifyJWTToken(conf *oauth2.Config, protectedPath, tokenStr str
 func (h handler) checkUsername(protectedPath string, claims map[string]interface{}) (string, bool) {
 	username, ok := claims["username"].(string)
 	if !ok {
-		return username, false
+		if username, ok = claims["globalid"].(string); !ok {
+			return username, false
+		}
 	}
 
 	usernames, exists := h.Usernames[protectedPath]
