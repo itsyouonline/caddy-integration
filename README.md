@@ -2,6 +2,10 @@
 
 This plugin protects resource paths using itsyou.online oauth2.
 
+## why
+
+- [why](why.md)
+
 ## Features
 
 Plugin features:
