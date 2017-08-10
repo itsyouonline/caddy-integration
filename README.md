@@ -71,8 +71,14 @@ Limitations:
 Install from caddy fork on itsyou.online org
 These files are patched to have the plugin registered.
 
-```
+in my pc the GOPATH is in ~/go
+
+```bash
 go get github.com/itsyouonline/caddy
+rm -f $GOPATH/bin/caddy
+cd $GOPATH/src/github.com/itsyouonline/caddy/caddy/
+bash build.bash
+cp caddy $GOPATH/bin/caddy
 ```
 
 Create `Caddyfile` based on `Caddyfile.example` file
