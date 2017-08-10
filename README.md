@@ -68,16 +68,18 @@ Limitations:
 
 ## Build and Run in Development
 
-Install caddydev
+Install from caddy fork on itsyou.online org
+These files are patched to have the plugin registered.
+
 ```
-go get github.com/caddyserver/caddydev
+go get github.com/itsyouonline/caddy
 ```
 
 Create `Caddyfile` based on `Caddyfile.example` file
 
 Run it
 ```
-caddydev
+caddy
 ```
 
 It will serve this directory
