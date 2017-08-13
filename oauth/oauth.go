@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mholt/caddy"
-	"github.com/mholt/caddy/caddyhttp/httpserver"
+	"github.com/itsyouonline/caddy"
+	"github.com/itsyouonline/caddy/caddyhttp/httpserver"
 	"golang.org/x/oauth2"
 )
 
