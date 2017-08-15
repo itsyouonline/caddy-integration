@@ -21,6 +21,8 @@ type token struct {
 }
 
 type handler struct {
+	LoginPage	       string
+	LoginURL	       string
 	CallbackPath           string
 	OauthConfs             map[string]*oauth2.Config
 	Usernames              map[string][]string
@@ -91,6 +93,9 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 
 // serve other dirs
 func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
+	if httpserver.Path(r.URL.Path).Matches(h.LoginURL){
+		return h.serveLogin(w, r)
+	}
 	//Check if a valid jwt is present in the `Authorization` header
 	authorizationHeader := r.Header.Get("Authorization")
 	token := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(authorizationHeader), "bearer"), "Bearer"))
@@ -99,12 +104,24 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		token = h.getJWTTokenFromCookies(r)
 	}
 
+	if token == "" && httpserver.Path(r.URL.Path).Matches(h.LoginPage){
+		return h.Next.ServeHTTP(w, r)
+	} else if httpserver.Path(r.URL.Path).Matches(h.LoginPage){
+		// If the user is already logged in redirect the login page to the root page
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		return http.StatusTemporaryRedirect, nil
+	}
+
 	for p, conf := range h.OauthConfs {
 		if !httpserver.Path(r.URL.Path).Matches(p) {
 			continue
 		}
 
 		if token == "" {
+			if h.LoginPage != ""{
+				http.Redirect(w, r, h.LoginPage, http.StatusTemporaryRedirect)
+				return http.StatusTemporaryRedirect, nil
+			}
 			return h.serveLogin(w, r)
 		}
 

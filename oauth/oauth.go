@@ -14,6 +14,8 @@ import (
 
 type config struct {
 	RedirectURL            string
+	LoginPage              string
+	LoginURL               string
 	CallbackPath           string
 	ClientID               string
 	ClientSecret           string
@@ -85,6 +87,8 @@ func setup(c *caddy.Controller) error {
 
 	httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
 		return &handler{
+			LoginPage:		conf.LoginPage,
+			LoginURL:		conf.LoginURL,
 			CallbackPath:           conf.CallbackPath,
 			Next:                   next,
 			hc:                     http.Client{},
@@ -124,6 +128,10 @@ func parse(c *caddy.Controller) (config, error) {
 				switch c.Val() {
 				case "redirect_url":
 					conf.RedirectURL, err = parseOne(c)
+				case "login_page":
+					conf.LoginPage, err = parseOne(c)
+				case "login_url":
+					conf.LoginURL, err = parseOne(c)
 				case "client_id":
 					conf.ClientID, err = parseOne(c)
 				case "client_secret":
