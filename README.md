@@ -77,6 +77,7 @@ in my pc the GOPATH is in ~/go
 go get github.com/itsyouonline/caddy
 rm -f $GOPATH/bin/caddy
 cd $GOPATH/src/github.com/itsyouonline/caddy/caddy/
+go get ./...
 bash build.bash
 cp caddy $GOPATH/bin/caddy
 ```
