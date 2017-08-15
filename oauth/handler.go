@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/itsyouonline/caddy/caddyhttp/httpserver"
+	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"golang.org/x/oauth2"
 )
 
