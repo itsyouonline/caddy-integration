@@ -18,9 +18,7 @@ Plugin features:
 
 
 ## Usage
-Add oauth block to Caddyfile
-
-example
+Add the following oauth block to your Caddyfile or use the [Caddyfile.example](https://github.com/itsyouonline/caddy-integration/blob/master/oauth/Caddyfile.example)
 ```
 oauth {
     # itsyou.online client ID
@@ -56,6 +54,14 @@ oauth {
     # Everyone is allowed to access this path but authentication is required.
     # It is possible to specify this multiple times.
     authentication_required /
+    
+    # login_page to which the user will be redirected when trying to access authentication_required pages
+    # leave blank if you need the users to be redirected to IYO page directly
+    login_page  /login
+    
+    # login url is the URL that will redirect the user to itsyou.online login page
+    # it can be used if you need to create login button
+    login_url   /oauth
 }
 
 ```
