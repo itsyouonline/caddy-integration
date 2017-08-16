@@ -39,6 +39,10 @@ oauth {
     # It is possible to specify this multiple times.
     authentication_required /
 
+    # Allow specific files even if they are set in authentication_required
+    # It is possible to specify this multiple times.
+    allow_extension css
+
     # login_page to which the user will be redirected when trying to access authentication_required pages
     # leave blank if you need the users to be redirected to IYO page directly
     login_page  /login

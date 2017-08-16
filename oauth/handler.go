@@ -28,6 +28,7 @@ type handler struct {
 	Usernames              map[string][]string
 	Organizations          map[string][]string
 	AuthenticationRequired []string
+	AllowedExtensions      []string
 	Next                   httpserver.Handler
 	hc                     http.Client
 }
@@ -112,6 +113,12 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		return http.StatusTemporaryRedirect, nil
 	}
 
+	// serve allowed extensions
+	for _, extension := range h.AllowedExtensions {
+		if strings.HasSuffix(r.URL.Path, extension){
+			return h.Next.ServeHTTP(w, r)
+		}
+	}
 	for p, conf := range h.OauthConfs {
 		if !httpserver.Path(r.URL.Path).Matches(p) {
 			continue

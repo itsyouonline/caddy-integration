@@ -24,6 +24,7 @@ type config struct {
 	Organizations          map[string][]string
 	Usernames              map[string][]string
 	AuthenticationRequired []string
+	AllowedExtensions      []string
 }
 
 func newConfig() config {
@@ -31,6 +32,7 @@ func newConfig() config {
 		Organizations:          map[string][]string{},
 		Usernames:              map[string][]string{},
 		AuthenticationRequired: []string{},
+		AllowedExtensions:      []string{},
 	}
 }
 
@@ -96,6 +98,7 @@ func setup(c *caddy.Controller) error {
 			Usernames:              conf.Usernames,
 			Organizations:          conf.Organizations,
 			AuthenticationRequired: conf.AuthenticationRequired,
+			AllowedExtensions:      conf.AllowedExtensions,
 		}
 	})
 	return nil
@@ -158,6 +161,12 @@ func parse(c *caddy.Controller) (config, error) {
 						return conf, e
 					}
 					conf.AuthenticationRequired = append(conf.AuthenticationRequired, path)
+				case "allow_extension":
+					path, e := parseOne(c)
+					if e != nil {
+						return conf, e
+					}
+					conf.AllowedExtensions = append(conf.AllowedExtensions, path)
 				}
 				if err != nil {
 					return conf, err
