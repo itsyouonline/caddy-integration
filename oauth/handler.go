@@ -9,6 +9,7 @@ import (
 
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"golang.org/x/oauth2"
+	"bytes"
 )
 
 type token struct {
@@ -58,7 +59,22 @@ func (h handler) serveLogin(w http.ResponseWriter, r *http.Request) (int, error)
 		return 500, fmt.Errorf("null oauth conf when serving login page for path `%v`", r.URL.Path)
 	}
 
-	url := conf.AuthCodeURL(path)
+	// request all scopes permissions while login
+	var scopes bytes.Buffer
+	for _, conf := range h.OauthConfs {
+		if len(conf.Scopes) > 0{
+			scopes.WriteString(strings.Join(conf.Scopes, ","))
+			scopes.WriteString(",")
+		}
+	}
+	var url string
+	if scopes.String() != ""{
+		scopeOption := oauth2.SetAuthURLParam("scope", scopes.String())
+		url = conf.AuthCodeURL(path, scopeOption)
+	}else{
+		url = conf.AuthCodeURL(path)
+	}
+
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 	return http.StatusTemporaryRedirect, nil
 }
