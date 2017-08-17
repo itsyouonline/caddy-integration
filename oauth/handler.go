@@ -94,7 +94,7 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 
 // serve other dirs
 func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
-	if httpserver.Path(r.URL.Path).Matches(h.LoginURL){
+	if h.LoginURL != "" && r.URL.Path == h.LoginURL{
 		return h.serveLogin(w, r)
 	}
 	//Check if a valid jwt is present in the `Authorization` header
@@ -105,10 +105,11 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		token = h.getJWTTokenFromCookies(r)
 	}
 
-	if token == "" && httpserver.Path(r.URL.Path).Matches(h.LoginPage){
+	// if the user isn't logged in and he requested the login page, serve it normally
+	// else if the user is already logged in and he requested the login page, redirect to the root path "/"
+	if token == "" && h.LoginPage != "" && r.URL.Path == h.LoginPage{
 		return h.Next.ServeHTTP(w, r)
-	} else if httpserver.Path(r.URL.Path).Matches(h.LoginPage){
-		// If the user is already logged in redirect the login page to the root page
+	} else if h.LoginPage != "" && r.URL.Path == h.LoginPage{
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return http.StatusTemporaryRedirect, nil
 	}
