@@ -55,7 +55,8 @@ func (h handler) verifyJWTToken(conf *oauth2.Config, protectedPath, tokenStr str
 	}
 
 	username, okUsername := h.checkUsername(protectedPath, claims)
-	if !okUsername && !h.checkScope(conf.Scopes, claims) {
+	okScope := h.checkScope(conf.Scopes, claims)
+	if !okUsername ||  !okScope{
 		return nil, fmt.Errorf("not allowed to access this resource")
 	}
 
