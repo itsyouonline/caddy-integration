@@ -62,6 +62,14 @@ oauth {
     # login url is the URL that will redirect the user to itsyou.online login page
     # it can be used if you need to create login button
     login_url   /oauth
+
+    # Allow specific files even if they are set in authentication_required
+    # It is possible to specify this multiple times
+    # typically used with static files (css, js, etc...) for login page
+    allow_extension css
+
+    # comma separated extra scopes to be requested from IYO, it can be blank
+    extra_scopes user:address,user:email,user:phone
 }
 
 ```

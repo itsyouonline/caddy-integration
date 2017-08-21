@@ -22,6 +22,7 @@ type token struct {
 }
 
 type handler struct {
+	ExtraScopes	       string
 	LoginPage	       string
 	LoginURL	       string
 	CallbackPath           string
@@ -67,6 +68,7 @@ func (h handler) serveLogin(w http.ResponseWriter, r *http.Request) (int, error)
 			scopes.WriteString(",")
 		}
 	}
+	scopes.WriteString(h.ExtraScopes)
 	var url string
 	if scopes.String() != ""{
 		scopeOption := oauth2.SetAuthURLParam("scope", scopes.String())

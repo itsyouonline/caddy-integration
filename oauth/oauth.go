@@ -21,6 +21,7 @@ type config struct {
 	ClientSecret           string
 	AuthURL                string
 	TokenURL               string
+	ExtraScopes            string
 	Organizations          map[string][]string
 	Usernames              map[string][]string
 	AuthenticationRequired []string
@@ -91,6 +92,7 @@ func setup(c *caddy.Controller) error {
 		return &handler{
 			LoginPage:		conf.LoginPage,
 			LoginURL:		conf.LoginURL,
+			ExtraScopes:		conf.ExtraScopes,
 			CallbackPath:           conf.CallbackPath,
 			Next:                   next,
 			hc:                     http.Client{},
@@ -162,11 +164,14 @@ func parse(c *caddy.Controller) (config, error) {
 					}
 					conf.AuthenticationRequired = append(conf.AuthenticationRequired, path)
 				case "allow_extension":
-					path, e := parseOne(c)
+					extension, e := parseOne(c)
 					if e != nil {
 						return conf, e
 					}
-					conf.AllowedExtensions = append(conf.AllowedExtensions, path)
+					conf.AllowedExtensions = append(conf.AllowedExtensions, extension)
+				case "extra_scopes":
+					conf.ExtraScopes, err = parseOne(c)
+
 				}
 				if err != nil {
 					return conf, err
