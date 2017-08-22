@@ -25,6 +25,7 @@ type handler struct {
 	ExtraScopes	       string
 	LoginPage	       string
 	LoginURL	       string
+	LogoutURL	       string
 	CallbackPath           string
 	OauthConfs             map[string]*oauth2.Config
 	Usernames              map[string][]string
@@ -39,6 +40,8 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 	switch {
 	case httpserver.Path(r.URL.Path).Matches(h.CallbackPath):
 		return h.serveCallback(w, r)
+	case httpserver.Path(r.URL.Path).Matches(h.LogoutURL):
+		return h.serveLogout(w, r)
 	default:
 		return h.serveHTTP(w, r)
 	}
@@ -78,6 +81,14 @@ func (h handler) serveLogin(w http.ResponseWriter, r *http.Request) (int, error)
 	}
 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	return http.StatusTemporaryRedirect, nil
+}
+
+// server oauth2 logout page
+func (h handler) serveLogout(w http.ResponseWriter, r *http.Request) (int, error) {
+	h.delCookies(w)
+	r.Header.Del("Authorization")
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	return http.StatusTemporaryRedirect, nil
 }
 

@@ -63,6 +63,10 @@ oauth {
     # it can be used if you need to create login button
     login_url   /oauth
 
+    # logout url is the URL that will logout the user and redirect him to "/"
+    # it can be used if you need to create logout button
+    logout_url   /logout
+
     # Allow specific files even if they are set in authentication_required
     # It is possible to specify this multiple times
     # typically used with static files (css, js, etc...) for login page
