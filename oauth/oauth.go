@@ -16,6 +16,7 @@ type config struct {
 	RedirectURL            string
 	LoginPage              string
 	LoginURL               string
+	LogoutURL              string
 	CallbackPath           string
 	ClientID               string
 	ClientSecret           string
@@ -92,6 +93,7 @@ func setup(c *caddy.Controller) error {
 		return &handler{
 			LoginPage:		conf.LoginPage,
 			LoginURL:		conf.LoginURL,
+			LogoutURL:		conf.LogoutURL,
 			ExtraScopes:		conf.ExtraScopes,
 			CallbackPath:           conf.CallbackPath,
 			Next:                   next,
@@ -137,6 +139,8 @@ func parse(c *caddy.Controller) (config, error) {
 					conf.LoginPage, err = parseOne(c)
 				case "login_url":
 					conf.LoginURL, err = parseOne(c)
+				case "logout_url":
+					conf.LogoutURL, err = parseOne(c)
 				case "client_id":
 					conf.ClientID, err = parseOne(c)
 				case "client_secret":
