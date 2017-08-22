@@ -4,6 +4,9 @@ browse
 
 log /tmp/access.log
 
+# Don't forget to Add no-cache header to restricted paths
+header / Cache-Control "no-cache, no-store, must-revalidate"
+
 oauth {
     # itsyou.online client ID
     client_id       mylab
