@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {{ template "styles" . }}
+</head>
+<body>
+<uic-fragment name="content">
+    <div class="container">
+        <div class="row vertical-offset-100">
+            <div class="col-md-4 col-md-offset-4">
+
+                {{ if .Error}}
+                <div class="alert alert-danger" role="alert">
+                    <strong>Internal Error. </strong> Please try again later.
+                </div>
+                {{end}}
+
+                {{if .Authenticated}}
+
+                {{template "userInfo" . }}
+
+                {{else}}
+                    {{ range $providerName, $opts := .Config.Oauth }}
+                    <a class="btn btn-block btn-lg btn-social btn-{{ $providerName }}" href="{{ $.Config.LoginPath }}/{{ $providerName }}">
+                        <span class="fa fa-{{ $providerName }}"></span> Sign in with {{ $providerName | ucfirst }}
+                    </a>
+                    {{end}}
+
+                    {{if and (not (eq (len .Config.Backends) 0)) (not (eq (len .Config.Oauth) 0))}}
+                    <div class="login-or-container">
+                        <hr class="login-or-hr">
+                        <div class="login-or lead">or</div>
+                    </div>
+                    {{end}}
+
+                    {{if not (eq (len .Config.Backends) 0) }}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <div class="panel-title">
+                                <h4>Sign in now</h4>
+                                {{ if .Failure}}<div class="alert alert-warning" role="alert">Invalid credentials</div>{{end}}
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <form accept-charset="UTF-8" role="form" method="POST" action="{{.Config.LoginPath}}">
+                                <fieldset>
+                                    <div class="form-group">
+                                        <input class="form-control" placeholder="Username" name="username" value="{{.UserInfo.Sub}}" type="text">
+                                    </div>
+                                    <div class="form-group">
+                                        <input class="form-control" placeholder="Password" name="password" type="password" value="">
+                                    </div>
+                                    <input class="btn btn-lg btn-success btn-block" type="submit" value="Login">
+                                </fieldset>
+                            </form>
+                        </div>
+                    </div>
+                    {{end}}
+                {{end}}
+            </div>
+        </div>
+    </div>
+</uic-fragment>
+</body>
+</html>
