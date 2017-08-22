@@ -26,10 +26,18 @@ htpasswd -n -b -B -C 15 USER PASSWORD
 
 You can use `template` directive in the `Caddyfile` if you need to use customized login page instead of the default one
 
-## example 2: auth against github
+## example 2: [auth against github](./github_example)
 
-use the browse directive to show content of example dir (1 file is enough)
+- Create an oauth application on [github](http://github.com) and set the `Authorization callback URL` to `YOUR_HOST/login/github`
 
+- set client_id and client_secret from bash:
+```bash
+export github_client_id="<CLIENT_ID>"
+export github_client_secret="<CLIENT_SECRET>"
+```
+
+- run Caddy
+You can use `template` directive in the `Caddyfile` if you need to use customized login page instead of the default one
 ## example 3: auth against IYO
 
 use the browse directive to show content of example dir (1 file is enough)
