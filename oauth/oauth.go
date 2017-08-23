@@ -22,6 +22,7 @@ type config struct {
 	ClientSecret           string
 	AuthURL                string
 	TokenURL               string
+	JwtURL                 string
 	ExtraScopes            string
 	Organizations          map[string][]string
 	Usernames              map[string][]string
@@ -91,10 +92,10 @@ func setup(c *caddy.Controller) error {
 
 	httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
 		return &handler{
-			LoginPage:		conf.LoginPage,
-			LoginURL:		conf.LoginURL,
-			LogoutURL:		conf.LogoutURL,
-			ExtraScopes:		conf.ExtraScopes,
+			LoginPage:              conf.LoginPage,
+			LoginURL:               conf.LoginURL,
+			JwtURL:                 conf.JwtURL,
+			ExtraScopes:            conf.ExtraScopes,
 			CallbackPath:           conf.CallbackPath,
 			Next:                   next,
 			hc:                     http.Client{},
@@ -149,6 +150,8 @@ func parse(c *caddy.Controller) (config, error) {
 					conf.AuthURL, err = parseOne(c)
 				case "token_url":
 					conf.TokenURL, err = parseOne(c)
+				case "jwt_url":
+					conf.JwtURL, err = parseOne(c)
 				case "organizations":
 					path, orgs, e := parseTwo(c)
 					if e != nil {
@@ -194,6 +197,9 @@ func parse(c *caddy.Controller) (config, error) {
 	}
 	if conf.TokenURL == "" {
 		conf.TokenURL = "https://itsyou.online/v1/oauth/access_token"
+	}
+	if conf.JwtURL == "" {
+		conf.JwtURL = "https://itsyou.online/v1/oauth/jwt"
 	}
 
 	// callback path

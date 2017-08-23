@@ -24,7 +24,7 @@ oauth {
     # itsyou.online client ID
     client_id       mylab
 
-    # itsyou.online client secret   
+    # itsyou.online client secret
     client_secret   fHfT3yBlZXlNRAbOSVw-PLZI2y9HgqcA0IVzXXXXXXXXXXXXXXX
 
     # oauth auth url
@@ -36,6 +36,11 @@ oauth {
     # leave it blank for default value
     # default value : https://itsyou.online/v1/oauth/access_token
     token_url       https://itsyou.online/v1/oauth/access_token
+
+    # jwt from oauth URL
+    # leave it blank for default value
+    # default value : https://itsyou.online/v1/oauth/jwt
+    jwt_url         https://itsyou.online/v1/oauth/jwt
 
     # oauth2 redirect URL
     redirect_url    http://localhost:2015/_iyo_callback
@@ -54,11 +59,11 @@ oauth {
     # Everyone is allowed to access this path but authentication is required.
     # It is possible to specify this multiple times.
     authentication_required /
-    
+
     # login_page to which the user will be redirected when trying to access authentication_required pages
     # leave blank if you need the users to be redirected to IYO page directly
     login_page  /login
-    
+
     # login url is the URL that will redirect the user to itsyou.online login page
     # it can be used if you need to create login button
     login_url   /oauth

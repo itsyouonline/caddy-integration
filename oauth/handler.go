@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
+	"bytes"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"golang.org/x/oauth2"
-	"bytes"
 )
 
 type token struct {
@@ -22,10 +22,11 @@ type token struct {
 }
 
 type handler struct {
-	ExtraScopes	       string
-	LoginPage	       string
-	LoginURL	       string
-	LogoutURL	       string
+	ExtraScopes            string
+	LoginPage              string
+	LoginURL               string
+	LogoutURL              string
+	JwtURL                 string
 	CallbackPath           string
 	OauthConfs             map[string]*oauth2.Config
 	Usernames              map[string][]string
@@ -66,17 +67,17 @@ func (h handler) serveLogin(w http.ResponseWriter, r *http.Request) (int, error)
 	// request all scopes permissions while login
 	var scopes bytes.Buffer
 	for _, conf := range h.OauthConfs {
-		if len(conf.Scopes) > 0{
+		if len(conf.Scopes) > 0 {
 			scopes.WriteString(strings.Join(conf.Scopes, ","))
 			scopes.WriteString(",")
 		}
 	}
 	scopes.WriteString(h.ExtraScopes)
 	var url string
-	if scopes.String() != ""{
+	if scopes.String() != "" {
 		scopeOption := oauth2.SetAuthURLParam("scope", scopes.String())
 		url = conf.AuthCodeURL(path, scopeOption)
-	}else{
+	} else {
 		url = conf.AuthCodeURL(path)
 	}
 
@@ -123,7 +124,7 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 
 // serve other dirs
 func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
-	if h.LoginURL != "" && r.URL.Path == h.LoginURL{
+	if h.LoginURL != "" && r.URL.Path == h.LoginURL {
 		return h.serveLogin(w, r)
 	}
 	//Check if a valid jwt is present in the `Authorization` header
@@ -136,16 +137,16 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 
 	// if the user isn't logged in and he requested the login page, serve it normally
 	// else if the user is already logged in and he requested the login page, redirect to the root path "/"
-	if token == "" && h.LoginPage != "" && r.URL.Path == h.LoginPage{
+	if token == "" && h.LoginPage != "" && r.URL.Path == h.LoginPage {
 		return h.Next.ServeHTTP(w, r)
-	} else if h.LoginPage != "" && r.URL.Path == h.LoginPage{
+	} else if h.LoginPage != "" && r.URL.Path == h.LoginPage {
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return http.StatusTemporaryRedirect, nil
 	}
 
 	// serve allowed extensions
 	for _, extension := range h.AllowedExtensions {
-		if strings.HasSuffix(r.URL.Path, extension){
+		if strings.HasSuffix(r.URL.Path, extension) {
 			return h.Next.ServeHTTP(w, r)
 		}
 	}
@@ -155,7 +156,7 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 
 		if token == "" {
-			if h.LoginPage != ""{
+			if h.LoginPage != "" {
 				http.Redirect(w, r, h.LoginPage, http.StatusTemporaryRedirect)
 				return http.StatusTemporaryRedirect, nil
 			}

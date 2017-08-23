@@ -56,7 +56,7 @@ func (h handler) verifyJWTToken(conf *oauth2.Config, protectedPath, tokenStr str
 
 	username, okUsername := h.checkUsername(protectedPath, claims)
 	okScope := h.checkScope(conf.Scopes, claims)
-	if !okUsername ||  !okScope{
+	if !okUsername || !okScope {
 		return nil, fmt.Errorf("not allowed to access this resource")
 	}
 
@@ -128,7 +128,7 @@ func (h handler) getJWTToken(conf *oauth2.Config, code, state string) (int64, st
 
 func (h handler) getJWTTokenScope(accessToken, scope string) (string, error) {
 	// build request
-	req, err := http.NewRequest("GET", "https://itsyou.online/v1/oauth/jwt", nil)
+	req, err := http.NewRequest("GET", h.JwtURL, nil)
 	if err != nil {
 		return "", err
 	}
