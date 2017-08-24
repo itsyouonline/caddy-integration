@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {{ template "styles" . }}
+</head>
+<body>
+<uic-fragment name="content">
+    <div class="container">
+        <div class="row vertical-offset-100">
+            <div class="col-md-4 col-md-offset-4">
+
+                {{ if .Error}}
+                <div class="alert alert-danger" role="alert">
+                    <strong>Internal Error. </strong> Please try again later.
+                </div>
+                {{end}}
+
+                {{if .Authenticated}}
+
+                {{template "userInfo" . }}
+
+                {{else}}
+                    {{ range $providerName, $opts := .Config.Oauth }}
+                    <a class="btn btn-block btn-lg btn-social" href="{{ $.Config.LoginPath }}/{{ $providerName }}">
+                         Sign in with {{ $providerName}}
+                    </a>
+                    {{end}}
+                {{end}}
+            </div>
+        </div>
+    </div>
+</uic-fragment>
+</body>
+</html>

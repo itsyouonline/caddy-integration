@@ -5,7 +5,7 @@ create set of examples with
 You will need to use [caddyman](https://github.com/itsyouonline/caddyman/) to build caddy with the following plugins:
 ```text
 github.com/BTBurke/caddy-jwt
-github.com/tarent/loginsrv/caddy
+github.com/itsyouonline/loginsrv/caddy
 ```
 ## example 1: [basic authentication with httpasswd file](./htpasswd_example)
 
@@ -38,7 +38,17 @@ export github_client_secret="<CLIENT_SECRET>"
 
 - run Caddy
 You can use `template` directive in the `Caddyfile` if you need to use customized login page instead of the default one
-## example 3: auth against IYO
+
+## example 3: [auth against IYO](./iyo_example)
+
+- set client_id and client_secret from bash:
+```bash
+export iyo_client_id="<CLIENT_ID>"
+export iyo_client_secret="<CLIENT_SECRET>"
+```
+
+- run Caddy
+You can use `template` directive in the `Caddyfile` if you need to use customized login page instead of the default one
 
 use the browse directive to show content of example dir (1 file is enough)
 do user of certain group all (all is all users in IYO as long as they are authenticated)
