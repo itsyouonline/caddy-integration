@@ -94,6 +94,7 @@ func setup(c *caddy.Controller) error {
 		return &handler{
 			LoginPage:              conf.LoginPage,
 			LoginURL:               conf.LoginURL,
+			LogoutURL:              conf.LogoutURL,
 			JwtURL:                 conf.JwtURL,
 			ExtraScopes:            conf.ExtraScopes,
 			CallbackPath:           conf.CallbackPath,
