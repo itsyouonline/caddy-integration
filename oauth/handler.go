@@ -41,7 +41,7 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 	switch {
 	case httpserver.Path(r.URL.Path).Matches(h.CallbackPath):
 		return h.serveCallback(w, r)
-	case httpserver.Path(r.URL.Path).Matches(h.LogoutURL):
+	case h.LogoutURL != "" && httpserver.Path(r.URL.Path).Matches(h.LogoutURL):
 		return h.serveLogout(w, r)
 	default:
 		return h.serveHTTP(w, r)
@@ -124,7 +124,7 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 
 // serve other dirs
 func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
-	if h.LoginURL != "" && r.URL.Path == h.LoginURL {
+	if h.LoginURL != "" && httpserver.Path(r.URL.Path).Matches(h.LoginURL) {
 		return h.serveLogin(w, r)
 	}
 	//Check if a valid jwt is present in the `Authorization` header
@@ -137,9 +137,9 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 
 	// if the user isn't logged in and he requested the login page, serve it normally
 	// else if the user is already logged in and he requested the login page, redirect to the root path "/"
-	if token == "" && h.LoginPage != "" && r.URL.Path == h.LoginPage {
+	if token == "" && h.LoginPage != "" && httpserver.Path(r.URL.Path).Matches(h.LoginPage) {
 		return h.Next.ServeHTTP(w, r)
-	} else if h.LoginPage != "" && r.URL.Path == h.LoginPage {
+	} else if h.LoginPage != "" && httpserver.Path(r.URL.Path).Matches(h.LoginPage) {
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return http.StatusTemporaryRedirect, nil
 	}
