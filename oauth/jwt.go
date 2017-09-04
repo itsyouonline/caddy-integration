@@ -135,13 +135,14 @@ func (h handler) getJWTTokenScope(accessToken, scope string) (string, error) {
 
 	req.Header.Set("Authorization", "token "+accessToken)
 
-	q := req.URL.Query()
-	q.Add("store_info", "true")
-	req.URL.RawQuery = q.Encode()
+	if h.ExtraScopes != "" {
+		scope = fmt.Sprintf("%v,%v", h.ExtraScopes, scope)
+	}
 
 	if len(scope) > 0 {
 		q := req.URL.Query()
 		q.Add("scope", scope)
+		q.Add("store_info", "true")
 		req.URL.RawQuery = q.Encode()
 	}
 
