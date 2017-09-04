@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"golang.org/x/oauth2"
+	"time"
 )
 
 type token struct {
@@ -118,7 +119,23 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 	// save JWT token in cookies
 	h.setCookies(jwtToken, expire, w)
 
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	//Redirect back to the origin path saved in the cookies
+	var origin string
+	c, err := r.Cookie("origin")
+	if err != nil {
+		origin = "/"
+	} else {
+		origin = c.Value
+	}
+	cookie := http.Cookie{
+		Name:    "origin",
+		Value:   "",
+		Path:    "/",
+		Expires: time.Now(),
+	}
+	http.SetCookie(w, &cookie)
+
+	http.Redirect(w, r, origin, http.StatusTemporaryRedirect)
 	return http.StatusTemporaryRedirect, nil
 }
 
@@ -156,6 +173,13 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 
 		if token == "" {
+			//Save the origin path into cookies to redirect back to it after login
+			cookie := &http.Cookie{
+				Name:  "origin",
+				Value: r.URL.Path,
+				Path:    "/",
+			}
+			http.SetCookie(w, cookie)
 			if h.LoginPage != "" {
 				http.Redirect(w, r, h.LoginPage, http.StatusTemporaryRedirect)
 				return http.StatusTemporaryRedirect, nil
