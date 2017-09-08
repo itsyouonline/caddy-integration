@@ -1,4 +1,6 @@
 
+# example for unmodified other oauth implementation
+
 create set of examples with
 - https://github.com/tarent/loginsrv
 
