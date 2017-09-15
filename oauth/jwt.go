@@ -23,7 +23,8 @@ MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAES5X8XrfKdx9gYayFITc89wad4usrk0n2
 
 type jwtInfo struct {
 	Username string
-	Scopes   []string
+	Scopes   interface{}
+	Payload  interface{}
 }
 
 func init() {
@@ -61,7 +62,9 @@ func (h handler) verifyJWTToken(conf *oauth2.Config, protectedPath, tokenStr str
 	}
 
 	return &jwtInfo{
+		Payload:  claims,
 		Username: username,
+		Scopes:   claims["scope"],
 	}, nil
 }
 

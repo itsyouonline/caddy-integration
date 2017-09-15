@@ -1,4 +1,4 @@
-# OAuth 
+# OAuth
 
 expose directory over oauth integrated with IYO.
 
@@ -64,6 +64,10 @@ oauth {
 
     # comma separated extra scopes to be requested from IYO, it can be blank
     extra_scopes user:address,user:email,user:phone
+
+    # set X-Iyo-Token header with the payload contents as json
+    # by default, this directive is not set
+    forward_payload
 }
 
 ```

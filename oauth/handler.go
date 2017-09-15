@@ -34,6 +34,7 @@ type handler struct {
 	Organizations          map[string][]string
 	AuthenticationRequired []string
 	AllowedExtensions      []string
+	ForwardPayload         bool
 	Next                   httpserver.Handler
 	hc                     http.Client
 }
@@ -177,7 +178,7 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 			cookie := &http.Cookie{
 				Name:  "origin",
 				Value: r.URL.Path,
-				Path:    "/",
+				Path:  "/",
 			}
 			http.SetCookie(w, cookie)
 			if h.LoginPage != "" {
@@ -196,6 +197,14 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 
 		r.Header.Set("X-Iyo-Username", info.Username)
+
+		if h.ForwardPayload {
+			json, err := json.Marshal(info.Payload)
+			if err == nil {
+				r.Header.Set("X-Iyo-Token", string(json))
+			}
+		}
+
 		logRequest(w, r, info)
 	}
 	return h.Next.ServeHTTP(w, r)
