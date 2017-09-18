@@ -92,6 +92,11 @@ func setup(c *caddy.Controller) error {
 		oauthConfs[path] = newOauthConf(conf, []string{})
 	}
 
+	// Create oauthConf for LoginURL if exist to be used for login only
+	if conf.LoginURL != "" {
+		oauthConfs[conf.LoginURL] = newOauthConf(conf, []string{})
+	}
+
 	httpserver.GetConfig(c).AddMiddleware(func(next httpserver.Handler) httpserver.Handler {
 		return &handler{
 			LoginPage:              conf.LoginPage,
