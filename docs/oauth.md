@@ -50,7 +50,8 @@ oauth {
     login_page  /login
 
     # login url is the URL that will redirect the user to itsyou.online login page
-    # it can be used if you need to create login button
+    # it can be used if you need to create login button 
+    # if you add query param called "redirect_back", it will redirect the user to the same page after login
     login_url   /oauth
 
     # logout url is the URL that will logout the user and redirect him to "/"

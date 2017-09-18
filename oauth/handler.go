@@ -143,6 +143,15 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 // serve other dirs
 func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) {
 	if h.LoginURL != "" && httpserver.Path(r.URL.Path).Matches(h.LoginURL) {
+		if _, ok := r.URL.Query()["redirect_back"]; ok {
+			origin := r.Referer()
+			cookie := &http.Cookie{
+				Name:  "origin",
+				Value: origin,
+				Path:  "/",
+			}
+			http.SetCookie(w, cookie)
+		}
 		return h.serveLogin(w, r)
 	}
 	//Check if a valid jwt is present in the `Authorization` header
