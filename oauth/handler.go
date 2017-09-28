@@ -35,6 +35,7 @@ type handler struct {
 	AuthenticationRequired []string
 	AllowedExtensions      []string
 	ForwardPayload         bool
+	Refreshable            bool
 	Next                   httpserver.Handler
 	hc                     http.Client
 }
@@ -97,7 +98,6 @@ func (h handler) serveLogout(w http.ResponseWriter, r *http.Request) (int, error
 
 // server oauth2 callback page
 func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, error) {
-
 	// get authorization code
 	code := r.FormValue("code")
 	state := r.FormValue("state")
@@ -219,11 +219,11 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 	return h.Next.ServeHTTP(w, r)
 }
 
-func (h handler) getToken(conf *oauth2.Config, code, state string) (*token, error) {
+func (h handler) getToken(conf *oauth2.Config, code, state string) (string, error) {
 	// build request
 	req, err := http.NewRequest("POST", conf.Endpoint.TokenURL, nil)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	q := req.URL.Query()
@@ -232,25 +232,39 @@ func (h handler) getToken(conf *oauth2.Config, code, state string) (*token, erro
 	q.Add("code", code)
 	q.Add("redirect_uri", conf.RedirectURL)
 	q.Add("state", state)
+	q.Add("response_type", "id_token")
+	q.Add("store_info", "true")
+
+	if h.Refreshable {
+		q.Add("scope", "offline_access")
+	}
+
 	req.URL.RawQuery = q.Encode()
 
 	// do request
+	fmt.Println(req)
 	resp, err := h.hc.Do(req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	// decode response
-	var t token
+	// var t token
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read body:%v", err)
+		return "", fmt.Errorf("failed to read body:%v", err)
 	}
 
-	err = json.Unmarshal(body, &t)
-	return &t, err
+	return string(body), nil
+
+	/*
+	    fmt.Printf("%s", body)
+
+		err = json.Unmarshal(body, &t)
+		return &t, err
+	*/
 }
 
 func (h handler) getJWTTokenFromCookies(r *http.Request) string {

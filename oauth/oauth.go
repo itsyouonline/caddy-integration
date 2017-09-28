@@ -29,6 +29,7 @@ type config struct {
 	AuthenticationRequired []string
 	AllowedExtensions      []string
 	ForwardPayload         bool
+	Refreshable            bool
 }
 
 func newConfig() config {
@@ -38,6 +39,7 @@ func newConfig() config {
 		AuthenticationRequired: []string{},
 		AllowedExtensions:      []string{},
 		ForwardPayload:         false,
+		Refreshable:            false,
 	}
 }
 
@@ -113,6 +115,7 @@ func setup(c *caddy.Controller) error {
 			AuthenticationRequired: conf.AuthenticationRequired,
 			AllowedExtensions:      conf.AllowedExtensions,
 			ForwardPayload:         conf.ForwardPayload,
+			Refreshable:            conf.Refreshable,
 		}
 	})
 	return nil
@@ -189,6 +192,8 @@ func parse(c *caddy.Controller) (config, error) {
 					conf.ExtraScopes, err = parseOne(c)
 				case "forward_payload":
 					conf.ForwardPayload = true
+				case "refreshable":
+					conf.Refreshable = true
 
 				}
 				if err != nil {
