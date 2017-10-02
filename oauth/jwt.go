@@ -126,21 +126,8 @@ func (h handler) getJWTToken(conf *oauth2.Config, code, state string) (int64, st
 
 	now := time.Now()
 	expire := info.Expires - now.Unix()
-	fmt.Println("Expire in:", expire)
 
 	return expire, token, err
-
-	/*
-		// get JWT token with scope of each organization
-		for _, scope := range conf.Scopes {
-			jwtToken, err := h.getJWTTokenScope(token.AccessToken, scope)
-			if err == nil && jwtToken != "" {
-				return token.ExpiresIn, jwtToken, nil
-			}
-		}
-		jwtToken, err := h.getJWTTokenScope(token.AccessToken, "")
-		return token.ExpiresIn, jwtToken, err
-	*/
 }
 
 func (h handler) getJWTTokenScope(accessToken, scope string) (string, error) {
@@ -163,9 +150,6 @@ func (h handler) getJWTTokenScope(accessToken, scope string) (string, error) {
 		req.URL.RawQuery = q.Encode()
 	}
 
-	// request jwt directly
-	// q.Add("response_type", "id_token")
-
 	// do request
 	fmt.Println(req)
 
@@ -175,12 +159,9 @@ func (h handler) getJWTTokenScope(accessToken, scope string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("RESPONSE WANTED")
-	fmt.Println(resp.Body)
-
 	if resp.StatusCode != 200 {
 		fmt.Println(resp.Body)
-		return "", fmt.Errorf("code=%v", resp.StatusCode)
+		return "", fmt.Errorf("getJWTTokenScope code=%v", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)

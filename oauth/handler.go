@@ -120,7 +120,7 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 	// save JWT token in cookies
 	h.setCookies(jwtToken, expire, w)
 
-	//Redirect back to the origin path saved in the cookies
+	// redirect back to the origin path saved in the cookies
 	var origin string
 	c, err := r.Cookie("origin")
 	if err != nil {
@@ -154,7 +154,7 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 		return h.serveLogin(w, r)
 	}
-	//Check if a valid jwt is present in the `Authorization` header
+	// check if a valid jwt is present in the `Authorization` header
 	authorizationHeader := r.Header.Get("Authorization")
 	token := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(authorizationHeader), "bearer"), "Bearer"))
 	if token == "" {
@@ -232,8 +232,8 @@ func (h handler) getToken(conf *oauth2.Config, code, state string) (string, erro
 	q.Add("code", code)
 	q.Add("redirect_uri", conf.RedirectURL)
 	q.Add("state", state)
-	q.Add("response_type", "id_token")
-	q.Add("store_info", "true")
+	q.Add("response_type", "id_token") // request jwt directly
+	q.Add("store_info", "true")        // add scope contents
 
 	if h.Refreshable {
 		q.Add("scope", "offline_access")
@@ -249,22 +249,12 @@ func (h handler) getToken(conf *oauth2.Config, code, state string) (string, erro
 	}
 	defer resp.Body.Close()
 
-	// decode response
-	// var t token
-
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read body:%v", err)
 	}
 
 	return string(body), nil
-
-	/*
-	    fmt.Printf("%s", body)
-
-		err = json.Unmarshal(body, &t)
-		return &t, err
-	*/
 }
 
 func (h handler) getJWTTokenFromCookies(r *http.Request) string {
