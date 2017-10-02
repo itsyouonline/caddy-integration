@@ -50,7 +50,7 @@ oauth {
     login_page  /login
 
     # login url is the URL that will redirect the user to itsyou.online login page
-    # it can be used if you need to create login button 
+    # it can be used if you need to create login button
     # if you add query param called "redirect_back", it will redirect the user to the same page after login
     login_url   /oauth
 
@@ -69,6 +69,10 @@ oauth {
     # set X-Iyo-Token header with the payload contents as json
     # by default, this directive is not set
     forward_payload
+
+    # request a refreshable jwt
+    # basicly, add 'offline_access' scope when needed
+    refreshable
 }
 
 ```
