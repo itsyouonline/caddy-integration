@@ -113,7 +113,7 @@ func (h handler) serveCallback(w http.ResponseWriter, r *http.Request) (int, err
 	// get JWT token from IYO server
 	expire, jwtToken, err := h.getJWTToken(conf, code, state)
 	if err != nil {
-		h.writeError(w, http.StatusUnauthorized, err.Error())
+		h.writeError(w, http.StatusUnauthorized)
 		return http.StatusUnauthorized, err
 	}
 
@@ -200,8 +200,12 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		// verify jwt token
 		info, err := h.verifyJWTToken(conf, p, token)
 		if err != nil {
+			// Raise forbidden if the user is correctly logged in but has no access to the resource
+			if err.Error() == string(http.StatusForbidden){
+				return http.StatusForbidden, err
+			}
+			// Delete cookies and raise unauthorized if the user has invalid JWT
 			h.delCookies(w)
-			h.writeError(w, http.StatusUnauthorized, err.Error())
 			return http.StatusUnauthorized, err
 		}
 
@@ -257,7 +261,7 @@ func (h handler) getJWTTokenFromCookies(r *http.Request) string {
 	return h.getCookies(r)
 }
 
-func (h handler) writeError(w http.ResponseWriter, code int, msg string) (int, error) {
+func (h handler) writeError(w http.ResponseWriter, code int) (int, error) {
 	w.WriteHeader(code)
 	return code, nil
 }

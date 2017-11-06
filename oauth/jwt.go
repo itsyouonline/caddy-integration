@@ -58,7 +58,7 @@ func (h handler) verifyJWTToken(conf *oauth2.Config, protectedPath, tokenStr str
 	username, okUsername := h.checkUsername(protectedPath, claims)
 	okScope := h.checkScope(conf.Scopes, claims)
 	if !okUsername || !okScope {
-		return nil, fmt.Errorf("not allowed to access this resource")
+		return nil, fmt.Errorf(string(http.StatusForbidden))
 	}
 
 	return &jwtInfo{
@@ -118,14 +118,7 @@ func (h handler) getJWTToken(conf *oauth2.Config, code, state string) (int64, st
 		return 0, "", err
 	}
 
-	// get JWT token with scope of each organization
-	for _, scope := range conf.Scopes {
-		jwtToken, err := h.getJWTTokenScope(token.AccessToken, scope)
-		if err == nil && jwtToken != "" {
-			return token.ExpiresIn, jwtToken, nil
-		}
-	}
-	jwtToken, err := h.getJWTTokenScope(token.AccessToken, "")
+	jwtToken, err := h.getJWTTokenScope(token.AccessToken, token.Scope)
 	return token.ExpiresIn, jwtToken, err
 }
 
@@ -137,10 +130,6 @@ func (h handler) getJWTTokenScope(accessToken, scope string) (string, error) {
 	}
 
 	req.Header.Set("Authorization", "token "+accessToken)
-
-	if h.ExtraScopes != "" {
-		scope = fmt.Sprintf("%v,%v", h.ExtraScopes, scope)
-	}
 
 	if len(scope) > 0 {
 		q := req.URL.Query()
