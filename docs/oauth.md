@@ -44,6 +44,10 @@ oauth {
     # Everyone is allowed to access this path but authentication is required.
     # It is possible to specify this multiple times.
     authentication_required /
+    
+    # api_base_path will be excluded from auto redirecting to itsyou.online
+    # but will return unauthorised status code (should be protected also with authentication_required)
+    api_base_path /api/v1
 
     # login_page to which the user will be redirected when trying to access authentication_required pages
     # leave blank if you need the users to be redirected to IYO page directly
