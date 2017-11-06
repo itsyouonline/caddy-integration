@@ -24,6 +24,7 @@ type config struct {
 	TokenURL               string
 	JwtURL                 string
 	ExtraScopes            string
+	APIPath                string
 	Organizations          map[string][]string
 	Usernames              map[string][]string
 	AuthenticationRequired []string
@@ -113,6 +114,7 @@ func setup(c *caddy.Controller) error {
 			AuthenticationRequired: conf.AuthenticationRequired,
 			AllowedExtensions:      conf.AllowedExtensions,
 			ForwardPayload:         conf.ForwardPayload,
+			APIPath: 		conf.APIPath,
 		}
 	})
 	return nil
@@ -185,6 +187,8 @@ func parse(c *caddy.Controller) (config, error) {
 						return conf, e
 					}
 					conf.AllowedExtensions = append(conf.AllowedExtensions, extension)
+				case "api_base_path":
+					conf.APIPath, err = parseOne(c)
 				case "extra_scopes":
 					conf.ExtraScopes, err = parseOne(c)
 				case "forward_payload":

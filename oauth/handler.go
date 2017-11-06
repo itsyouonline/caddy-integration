@@ -29,6 +29,7 @@ type handler struct {
 	LogoutURL              string
 	JwtURL                 string
 	CallbackPath           string
+	APIPath                string
 	OauthConfs             map[string]*oauth2.Config
 	Usernames              map[string][]string
 	Organizations          map[string][]string
@@ -183,6 +184,11 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 
 		if token == "" {
+			// Return Unauthorized if the url relates to any API endpoint and don't continue with login flow
+			if httpserver.Path(r.URL.Path).Matches(h.APIPath) {
+				return http.StatusUnauthorized, nil
+			}
+
 			//Save the origin path into cookies to redirect back to it after login
 			cookie := &http.Cookie{
 				Name:  "origin",
