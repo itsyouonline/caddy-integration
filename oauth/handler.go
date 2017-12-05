@@ -185,7 +185,7 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 
 		if token == "" {
 			// Return Unauthorized if the url relates to any API endpoint and don't continue with login flow
-			if httpserver.Path(r.URL.Path).Matches(h.APIPath) {
+			if len(h.APIPath) > 0 && httpserver.Path(r.URL.Path).Matches(h.APIPath) {
 				return http.StatusUnauthorized, nil
 			}
 
