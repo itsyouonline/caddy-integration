@@ -192,7 +192,7 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 			//Save the origin path into cookies to redirect back to it after login
 			cookie := &http.Cookie{
 				Name:  "origin",
-				Value: r.URL.Path,
+				Value: r.URL.String(),
 				Path:  "/",
 			}
 			http.SetCookie(w, cookie)
