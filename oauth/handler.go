@@ -8,9 +8,10 @@ import (
 	"strings"
 
 	"bytes"
+	"time"
+
 	"github.com/mholt/caddy/caddyhttp/httpserver"
 	"golang.org/x/oauth2"
-	"time"
 )
 
 type token struct {
@@ -155,12 +156,13 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		}
 		return h.serveLogin(w, r)
 	}
-	//Check if a valid jwt is present in the `Authorization` header
-	authorizationHeader := r.Header.Get("Authorization")
-	token := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(authorizationHeader), "bearer"), "Bearer"))
+
+	//Check if a jwt is present in a cookie (normally an interactive session through a browser)
+	token := h.getJWTTokenFromCookies(r)
 	if token == "" {
-		//Check if a jwt is present in a cookie (normally an interactive session through a browser)
-		token = h.getJWTTokenFromCookies(r)
+		//Check if a valid jwt is present in the `Authorization` header
+		authorizationHeader := r.Header.Get("Authorization")
+		token = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(authorizationHeader), "bearer"), "Bearer"))
 	}
 
 	// if the user isn't logged in and he requested the login page, serve it normally
@@ -207,7 +209,7 @@ func (h handler) serveHTTP(w http.ResponseWriter, r *http.Request) (int, error) 
 		info, err := h.verifyJWTToken(conf, p, token)
 		if err != nil {
 			// Raise forbidden if the user is correctly logged in but has no access to the resource
-			if err.Error() == string(http.StatusForbidden){
+			if err.Error() == string(http.StatusForbidden) {
 				return http.StatusForbidden, err
 			}
 			// Delete cookies and raise unauthorized if the user has invalid JWT
