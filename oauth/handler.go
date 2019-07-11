@@ -10,7 +10,7 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/mholt/caddy/caddyhttp/httpserver"
+	"github.com/caddyserver/caddy/caddyhttp/httpserver"
 	"golang.org/x/oauth2"
 )
 
